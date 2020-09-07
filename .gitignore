@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Libreria nueva (slixmpp)
+slix/
+
+# VSCode
+.vscode/
