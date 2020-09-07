@@ -6,6 +6,7 @@ from optparse import OptionParser
 import sleekxmpp
 from sleekxmpp.exceptions import IqError, IqTimeout
 
+
 class RosterBrowser(sleekxmpp.ClientXMPP):
 
     def __init__(self, jid, password):
@@ -27,7 +28,6 @@ class RosterBrowser(sleekxmpp.ClientXMPP):
         except IqTimeout:
             print('Error: Request timed out')
         self.send_presence()
-
 
         print('Waiting for presence updates...\n')
         self.presences_received.wait(10)
@@ -63,32 +63,33 @@ class RosterBrowser(sleekxmpp.ClientXMPP):
             self.presences_received.set()
         else:
             self.presences_received.clear()
-        
-        print(f'THIS IS HOW MANY ROSTER ENTRIES HAVE RECEIVED MY PRESENCE: {len(self.received)}')
-    
+
+        print(
+            f'THIS IS HOW MANY ROSTER ENTRIES HAVE RECEIVED MY PRESENCE: {len(self.received)}')
+
     def message(self, msg):
 
-      if msg['type'] in ('chat', 'normal'):
-        print('I GOT A MESSAGE: {}'.format(msg['body']))
-        self.disconnect()
+        if msg['type'] in ('chat', 'normal'):
+            print('I GOT A MESSAGE: {}'.format(msg['body']))
+            self.disconnect()
 
 
 if __name__ == '__main__':
     # Setup the command line arguments.
     optp = OptionParser()
-    optp.add_option('-q','--quiet', help='set logging to ERROR',
+    optp.add_option('-q', '--quiet', help='set logging to ERROR',
                     action='store_const',
                     dest='loglevel',
                     const=logging.ERROR,
                     default=logging.ERROR)
 
-    optp.add_option('-d','--debug', help='set logging to DEBUG',
+    optp.add_option('-d', '--debug', help='set logging to DEBUG',
                     action='store_const',
                     dest='loglevel',
                     const=logging.DEBUG,
                     default=logging.ERROR)
 
-    optp.add_option('-v','--verbose', help='set logging to COMM',
+    optp.add_option('-v', '--verbose', help='set logging to COMM',
                     action='store_const',
                     dest='loglevel',
                     const=5,

@@ -58,7 +58,7 @@ class RegisterBot(sleekxmpp.ClientXMPP):
             logging.info("Account created for %s!" % self.boundjid)
         except IqError as e:
             logging.error("Could not register account: %s" %
-                    e.iq['error']['text'])
+                          e.iq['error']['text'])
             self.disconnect()
         except IqTimeout:
             logging.error("No response from server.")
@@ -95,10 +95,10 @@ if __name__ == '__main__':
         args.password = getpass("Password: ")
 
     xmpp = RegisterBot(args.jid, args.password)
-    xmpp.register_plugin('xep_0030') # Service Discovery
-    xmpp.register_plugin('xep_0004') # Data forms
-    xmpp.register_plugin('xep_0066') # Out-of-band Data
-    xmpp.register_plugin('xep_0077') # In-band Registration
+    xmpp.register_plugin('xep_0030')  # Service Discovery
+    xmpp.register_plugin('xep_0004')  # Data forms
+    xmpp.register_plugin('xep_0066')  # Out-of-band Data
+    xmpp.register_plugin('xep_0077')  # In-band Registration
 
     # Some servers don't advertise support for inband registration, even
     # though they allow it. If this applies to your server, use:

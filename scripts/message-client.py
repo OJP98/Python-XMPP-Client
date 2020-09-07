@@ -4,6 +4,7 @@ from optparse import OptionParser
 
 import sleekxmpp
 
+
 class SendMsgBot(sleekxmpp.ClientXMPP):
 
     def __init__(self, jid, password, recipient, message):
@@ -77,8 +78,8 @@ if __name__ == '__main__':
         opts.message = input("Message: ")
 
     xmpp = SendMsgBot(opts.jid, opts.password, opts.to, opts.message)
-    xmpp.register_plugin('xep_0030') # Service Discovery
-    xmpp.register_plugin('xep_0199') # XMPP Ping
+    xmpp.register_plugin('xep_0030')  # Service Discovery
+    xmpp.register_plugin('xep_0199')  # XMPP Ping
 
     # Connect to the XMPP server and start processing XMPP stanzas.
     if xmpp.connect():
