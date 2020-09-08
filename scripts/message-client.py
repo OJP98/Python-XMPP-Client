@@ -13,7 +13,7 @@ class SendMsgBot(sleekxmpp.ClientXMPP):
         self.recipient = recipient
         self.msg = message
 
-        self.add_event_handler("session_start", self.start, threaded=True)
+        self.add_event_handler("session_start", self.start)
 
     def start(self, event):
         """
@@ -70,10 +70,13 @@ if __name__ == '__main__':
 
     if opts.jid is None:
         opts.jid = input("Username: ")
+        # opts.jid = 'testing@redes2020.xyz'
     if opts.password is None:
         opts.password = getpass.getpass("Password: ")
+        # opts.password = 'testing'
     if opts.to is None:
-        opts.to = input("Send To: ")
+        # opts.to = input("Send To: ")
+        opts.to = 'jua17315@redes2020.xyz'
     if opts.message is None:
         opts.message = input("Message: ")
 

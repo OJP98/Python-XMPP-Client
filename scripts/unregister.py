@@ -1,8 +1,6 @@
 import logging
 from getpass import getpass
 from argparse import ArgumentParser
-
-
 import sleekxmpp
 from sleekxmpp.exceptions import IqError, IqTimeout
 
@@ -13,14 +11,6 @@ class RegisterBot(sleekxmpp.ClientXMPP):
         sleekxmpp.ClientXMPP.__init__(self, jid, password)
 
         self.add_event_handler("session_start", self.start, threaded=False)
-
-        # The register event provides an Iq result stanza with
-        # a registration form from the server. This may include
-        # the basic registration fields, a data form, an
-        # out-of-band URL, or any combination. For more advanced
-        # cases, you will need to examine the fields provided
-        # and respond accordingly. SleekXMPP provides plugins
-        # for data forms and OOB links that will make that easier.
         self.add_event_handler("register", self.register, threaded=False)
 
     def start(self, event):
@@ -34,14 +24,18 @@ class RegisterBot(sleekxmpp.ClientXMPP):
 
         resp = self.Iq()
         resp['type'] = 'set'
-        resp['register']['username'] = self.boundjid.user
-        resp['register']['password'] = self.password
+        resp['id'] = 'unreg1'
+        # resp['register']['username'] = self.boundjid.user
+        # resp['register']['password'] = self.password
+        resp['register']['remove'] = True
+
+        # print(resp.values)
 
         try:
             resp.send(now=True)
-            logging.info("Account created for %s!" % self.boundjid)
+            logging.info("Account unregistered for %s!" % self.boundjid)
         except IqError as e:
-            logging.error("Could not register account: %s" %
+            logging.error("Could not unregister account: %s" %
                           e.iq['error']['text'])
             self.disconnect()
         except IqTimeout:

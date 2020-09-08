@@ -105,9 +105,12 @@ if __name__ == '__main__':
 
     if opts.jid is None:
         # opts.jid = input("Username: ")
-        opts.jid = 'testing@redes2020.xyz'
+        opts.jid = 'jua17315@redes2020.xyz'
     if opts.password is None:
-        opts.password = 'testing'
+        opts.password = 'jua17315'
+
+    logging.basicConfig(level=logging.INFO,
+                        format='%(levelname)-8s %(message)s')
 
     xmpp = RosterBrowser(opts.jid, opts.password)
 
