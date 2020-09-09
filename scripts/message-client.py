@@ -76,7 +76,7 @@ if __name__ == '__main__':
         # opts.password = 'testing'
     if opts.to is None:
         # opts.to = input("Send To: ")
-        opts.to = 'jua17315@redes2020.xyz'
+        opts.to = 'sebdev@redes2020.xyz'
     if opts.message is None:
         opts.message = input("Message: ")
 

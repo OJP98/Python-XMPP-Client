@@ -55,7 +55,7 @@ class Client(ClientXMPP):
         self.disconnect()
 
     def add_user(self, username):
-        self.send_presence_subscription(pto='testing2@redes2020.xyz',
+        self.send_presence_subscription(pto='sebdev@redes2020.xyz',
                                         ptype='subscribe',
                                         pfrom='jua17315@redes2020.xyz')
         # self.disconnect()
@@ -63,6 +63,23 @@ class Client(ClientXMPP):
     def new_presence_subscribed(self, presence):
         print('PRESENCE SUBSCRIBED!')
         print(presence)
+
+    def unregister_account(self):
+        resp = self.Iq()
+        resp['type'] = 'set'
+        resp['from'] = self.boundjid.full
+        resp['register']['remove'] = True
+
+        try:
+            resp.send(now=True)
+            logging.info("Account unregistered for %s!" % self.boundjid)
+        except IqError as e:
+            logging.error("Could not unregister account: %s" %
+                          e.iq['error']['text'])
+            self.disconnect()
+        except IqTimeout:
+            logging.error("No response from server.")
+            self.disconnect()
 
 
 if __name__ == '__main__':

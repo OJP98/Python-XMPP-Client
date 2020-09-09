@@ -11,25 +11,22 @@ class RegisterBot(sleekxmpp.ClientXMPP):
         sleekxmpp.ClientXMPP.__init__(self, jid, password)
 
         self.add_event_handler("session_start", self.start, threaded=False)
-        self.add_event_handler("register", self.register, threaded=False)
+        # self.add_event_handler("register", self.unregister, threaded=False)
 
     def start(self, event):
 
         self.send_presence()
         self.get_roster()
+        self.unregister(None)
 
-        self.disconnect()
+        self.disconnect(reconnect=False)
 
-    def register(self, iq):
+    def unregister(self, iq):
 
         resp = self.Iq()
         resp['type'] = 'set'
-        resp['id'] = 'unreg1'
-        # resp['register']['username'] = self.boundjid.user
-        # resp['register']['password'] = self.password
+        resp['from'] = self.fulljid
         resp['register']['remove'] = True
-
-        # print(resp.values)
 
         try:
             resp.send(now=True)

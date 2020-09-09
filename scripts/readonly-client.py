@@ -23,7 +23,7 @@ class ReadOnlyBot(sleekxmpp.ClientXMPP):
         print(msg)
 
         if msg['type'] in ('chat', 'normal'):
-            print("Thanks for sending\n%(body)s" % msg)
+            print("Me enviaron:\n%(body)s" % msg)
             # msg.reply("Thanks for sending\n%(body)s" % msg).send()
             self.disconnect(wait=True)
 
@@ -37,8 +37,8 @@ class ReadOnlyBot(sleekxmpp.ClientXMPP):
 if __name__ == '__main__':
     # username = input('Username: ')
     # password = getpass.getpass('Password: ')
-    username = 'testing2@redes2020.xyz'
-    password = 'testing2'
+    username = 'jua17315@redes2020.xyz'
+    password = 'jua17315'
 
     xmpp = ReadOnlyBot(username, password)
     xmpp.register_plugin('xep_0030')  # Service Discovery
