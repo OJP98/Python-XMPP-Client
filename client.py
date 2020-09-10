@@ -16,57 +16,76 @@ class Client(ClientXMPP, threading.Thread):
         ClientXMPP.__init__(self, jid, password)
         self.auto_authorize = True
         self.auto_subscribe = True
+        self.user_dict = {}
         # self.add_event_handler('session_start', self.session_start)
         self.add_event_handler('message', self.received_message)
         self.add_event_handler('disconnected', self.got_disconnected)
         self.add_event_handler('failed_auth', self.on_failed_auth)
         self.add_event_handler('presence_subscribed',
                                self.new_presence_subscribed)
-
+        self.add_event_handler("got_offline", self.presence_offline)
         self.add_event_handler('changed_status', self.wait_for_presences)
         self.received = set()
         self.presences_received = threading.Event()
 
     def session_start(self):
         try:
-            self.get_roster()
+            self.get_roster(block=True)
         except IqError as err:
             print('Error: %s' % err.iq['error']['condition'])
         except IqTimeout:
             print('Error: Request timed out')
+
         self.send_presence()
 
-    def print_roster(self, update=False):
-
-        try:
-            self.get_roster()
-        except IqError as err:
-            print('Error: %s' % err.iq['error']['condition'])
-        except IqTimeout:
-            print('Error: Request timed out')
-
-        print('Roster for %s' % self.boundjid.bare)
+    def create_user_dict(self, wait=False):
         groups = self.client_roster.groups()
         for group in groups:
-            print('\n%s' % group)
-            print('-' * 72)
             for jid in groups[group]:
+                # Check we are not evaluating ourselves
+                if jid == self.boundjid.bare:
+                    continue
+
+                # Get some data
                 sub = self.client_roster[jid]['subscription']
                 name = self.client_roster[jid]['name']
-                if self.client_roster[jid]['name']:
-                    print(' %s (%s) [%s]' % (name, jid, sub))
-                else:
-                    print(' %s [%s]' % (jid, sub))
-
                 connections = self.client_roster.presence(jid)
-                for res, pres in connections.items():
-                    show = 'available'
-                    if pres['show']:
-                        show = pres['show']
-                    print('   - %s (%s)' % (res, show))
-                    if pres['status']:
-                        print('       %s' % pres['status'])
 
+                # Check if connections is empty
+                if connections.items():
+                    # Go through each connection
+                    for res, pres in connections.items():
+
+                        if res:
+                            ''
+
+                        show = 'available'
+                        status = ''
+                        if pres['show']:
+                            show = pres['show']
+                        if pres['status']:
+                            status = pres['status']
+
+                        # Check if the user is in the dict, else add it
+                        if not jid in self.user_dict:
+                            self.user_dict[jid] = User(
+                                jid, name, show, status, sub)
+                        else:
+                            self.user_dict[jid].update_data(status, show)
+
+                # User is not connected, still add him to the dict
+                else:
+                    if not jid in self.user_dict:
+                        self.user_dict[jid] = User(
+                            jid, name, 'offline', '', sub)
+
+    # Returns a dict jid - User. If it's empty, create it.
+    def get_user_dict(self):
+        if not self.user_dict:
+            self.create_user_dict()
+        return self.user_dict
+
+    # Create user dict on new presence
     def wait_for_presences(self, pres):
         self.received.add(pres['from'].bare)
         if len(self.received) >= len(self.client_roster.keys()):
@@ -74,10 +93,12 @@ class Client(ClientXMPP, threading.Thread):
         else:
             self.presences_received.clear()
 
+        self.create_user_dict()
+
     def received_message(self, msg):
         if msg['type'] in ('chat', 'normal'):
             print('New message: ', msg)
-            msg.reply('Thanks for sending\n%(body)s' % msg).send()
+            # msg.reply('Thanks for sending\n%(body)s' % msg).send()
 
     def got_disconnected(self, event):
         print(f'{OKBLUE}Logged out from the current session{ENDC}')
@@ -87,9 +108,10 @@ class Client(ClientXMPP, threading.Thread):
         self.disconnect()
 
     def add_user(self, username):
-        self.send_presence_subscription(pto='sebdev@redes2020.xyz',
+        self.send_presence_subscription(pto=username,
                                         ptype='subscribe',
-                                        pfrom='jua17315@redes2020.xyz')
+                                        pfrom=self.boundjid.bare)
+        print(f'{OKBLUE}Subscribed to {username}!{ENDC}')
 
     def new_presence_subscribed(self, presence):
         print('PRESENCE SUBSCRIBED!')
@@ -111,6 +133,12 @@ class Client(ClientXMPP, threading.Thread):
         except IqTimeout:
             logging.error('No response from server.')
             self.disconnect()
+
+    def presence_offline(self, presence):
+        new_presence = str(presence['from']).split('/')[0]
+        if self.boundjid.bare != new_presence and new_presence in self.user_dict:
+            self.user_dict[new_presence].update_data(
+                '', presence['type'])
 
 
 class RegisterBot(ClientXMPP):
@@ -135,3 +163,18 @@ class RegisterBot(ClientXMPP):
             print(f'{FAIL}No response from server.{ENDC}')
 
         self.disconnect()
+
+
+class User():
+    def __init__(self, jid, name, show, status, subscription):
+        self.jid = jid
+        self.name = name
+        self.show = show
+        self.status = status
+
+    def update_data(self, status, show):
+        self.show = show
+        self.status = status
+
+    def get_connection_data(self):
+        return [self.show, self.status]
