@@ -1,10 +1,10 @@
 import logging
 import sleekxmpp
 import client
-import threading
+from prettytable import PrettyTable
 import time
 from getpass import getpass
-from bcolors import HEADER, WARNING, ENDC, FAIL, OKBLUE, OKGREEN
+from bcolors import HEADER, WARNING, ENDC, FAIL, OKBLUE, OKGREEN, BOLD
 from sleekxmpp.exceptions import IqError, IqTimeout
 
 close_login = False
@@ -40,6 +40,21 @@ logging.basicConfig(level=logging.ERROR,
                     format='%(levelname)-8s %(message)s')
 
 
+def print_users(user_dict):
+    table = PrettyTable(border=False)
+    table.field_names = [f'{BOLD}JID{ENDC}',
+                         f'{BOLD}SHOW{ENDC}',
+                         f'{BOLD}STATUS{ENDC}']
+    table.align = 'l'
+    for jid, user in user_dict.items():
+        user_data = user.get_connection_data()
+        user_data.insert(0, jid)
+        table.add_row(user_data)
+
+    table.sortby = f'{BOLD}SHOW{ENDC}'
+    print(table)
+
+
 def handle_session(event):
     close_session = False
     xmpp.session_start()
@@ -50,9 +65,15 @@ def handle_session(event):
         print(main_menu)
         option = input('Enter an option: ')
 
+        # Show connected users
         if option == '1':
-            # print(f'\n')
-            xmpp.print_roster()
+            roster = xmpp.get_user_dict()
+            print_users(roster)
+
+        # Add a user to my contact list
+        elif option == '2':
+            user_jid = input('Enter user jid: ')
+            xmpp.add_user(user_jid)
 
         elif option == '7':
             print(f'\nLogging out of {xmpp.boundjid.bare}')
@@ -69,14 +90,11 @@ def handle_session(event):
             print(invalid_option)
 
 
-lock = threading.Lock()
-
 if __name__ == "__main__":
     while not close_login:
 
         print(login_menu)
-        with lock:
-            option = input('Enter an option: ')
+        option = input('Enter an option: ')
 
         # Register a new user
         if option == '1':
@@ -104,8 +122,10 @@ if __name__ == "__main__":
         # Login with credentials
         elif option == '2':
             print('\nLogin to your account')
-            username = input('Enter your username: ')
-            password = getpass('Enter your password: ')
+            # username = input('Enter your username: ')
+            # password = getpass('Enter your password: ')
+            username = 'jua17315@redes2020.xyz'
+            password = 'jua17315'
 
             xmpp = client.Client(username, password)
             xmpp.register_plugin('xep_0030')
@@ -129,5 +149,3 @@ if __name__ == "__main__":
 
         else:
             print(invalid_option)
-
-# exit()
