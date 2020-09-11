@@ -1,30 +1,36 @@
 import logging
-import sleekxmpp
-import client
-from prettytable import PrettyTable
 import time
 from getpass import getpass
-from bcolors import *
+
+import sleekxmpp
+from prettytable import PrettyTable
 from sleekxmpp.exceptions import IqError, IqTimeout
+
+import client
+from bcolors import *
 
 close_login = False
 
-logging.basicConfig(level=logging.ERROR,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(levelname)-8s %(message)s')
 
 # Prints a table with every user and its index
+
+
 def print_user_index(user_dict):
     table = PrettyTable(border=False)
     table.field_names = [f'{BOLD}No. {ENDC}', f'{BOLD}JID{ENDC}']
     table.align = 'l'
     counter = 1
-    for jid, user in user_dict.items():
+    for jid in user_dict.keys():
         table.add_row([counter, jid])
         counter += 1
-    
+
     print(table)
 
 # Prints a table with every user and its connection data
+
+
 def print_users_connection(user_dict):
     table = PrettyTable(border=False)
     table.field_names = [f'{BOLD}JID{ENDC}',
@@ -40,6 +46,8 @@ def print_users_connection(user_dict):
     print(table)
 
 # Hanldes the client once the user logged in
+
+
 def handle_session(event):
     close_session = False
     xmpp.session_start()
@@ -52,7 +60,7 @@ def handle_session(event):
 
         # OPTION 1: Show connected users
         if option == '1':
-            print(f'\n\t{BOLD}My roster:{ENDC}')
+            print(f'\n{BOLD}My roster:{ENDC}')
             roster = xmpp.get_user_dict()
             print_users_connection(roster)
 
@@ -82,10 +90,11 @@ def handle_session(event):
                 print(invalid_option)
                 continue
 
-            print(f'\nRecipient is: {dest}\nThe unread messages from this user are:')
+            print(
+                f'\nRecipient is: {dest}\nThe unread messages from this user are:')
             for msg in roster[dest].get_messages():
                 print(f'\t--> {msg}')
-                        
+
             new_message = input('Enter a message: ')
             xmpp.send_session_message(dest, new_message)
 
@@ -102,7 +111,7 @@ def handle_session(event):
                 nick = input('Nick: ')
 
                 if nick and group_name:
-                    # xmpp.
+                    xmpp.create_new_room(group_name, nick)
                     print(f'{OKGREEN}{group_name} created!{ENDC}')
                 else:
                     print(f'{FAIL}Please set a group name and a nick{ENDC}')
@@ -131,7 +140,6 @@ def handle_session(event):
                     print(f'{OKGREEN}Message sent!{ENDC}')
                 else:
                     print(error_msg)
-                    
 
             # 4. Leave group
             elif group_option == '4':
@@ -160,7 +168,8 @@ def handle_session(event):
                 show = show_array[int(show_input)-1]
             except:
                 # If not, go to the default one.
-                print(f'{WARNING}Incorrect show option selected... Seting show to "available".')
+                print(
+                    f'{WARNING}Incorrect show option selected... Seting show to "available".')
                 show = 'available'
 
             # Send the presence message and inform the user about it.
@@ -205,7 +214,7 @@ if __name__ == "__main__":
                 xmpp.register_plugin('xep_0066')  # Out-of-band Data
                 xmpp.register_plugin('xep_0077')  # In-band Registration
                 xmpp.register_plugin('xep_0045')  # Groupchat
-                xmpp.register_plugin('xep_0199') # XMPP Ping
+                xmpp.register_plugin('xep_0199')  # XMPP Ping
                 xmpp['xep_0077'].force_registration = True
 
                 if xmpp.connect():

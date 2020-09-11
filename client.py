@@ -102,10 +102,10 @@ class Client(ClientXMPP, threading.Thread):
         sender = sender.split('/')[0]
         if msg['type'] in ('chat', 'normal'):
             print(f'New message from {sender}')
-            
+
             if not sender in self.user_dict:
-                self.user_dict[sender] = User(sender, '', '', '')
-            
+                self.user_dict[sender] = User(sender, '', '', '', '')
+
             self.user_dict[sender].add_message_to_list(msg['body'])
 
             # msg.reply('Thanks for sending\n%(body)s' % msg).send()
@@ -149,30 +149,46 @@ class Client(ClientXMPP, threading.Thread):
         if self.boundjid.bare != new_presence and new_presence in self.user_dict:
             self.user_dict[new_presence].update_data(
                 '', presence['type'])
-    
+
     def presence_message(self, show, status):
         self.send_presence(pshow=show, pstatus=status)
 
     def send_session_message(self, recipient, message):
-        print('sending a message to',recipient)
+        print('sending a message to', recipient)
         print('from', self.boundjid.full)
         self.send_message(
-                        mto=recipient,
-                        mbody=message,
-                        mtype='chat',
-                        mfrom=self.boundjid.bare)
+            mto=recipient,
+            mbody=message,
+            # mtype='chat',
+            mfrom=self.boundjid.bare)
         if recipient in self.user_dict:
             self.user_dict[recipient].clean_unread_messages()
-    
 
     def join_room(self, room, nick):
-        self.plugin['xep_0045'].joinMUC(room, nick, wait=True)
-    
+        self.plugin['xep_0045'].joinMUC(
+            room,
+            nick,
+            pstatus='Hello world!',
+            pfrom=self.boundjid.full,
+            wait=True)
+
+    def create_new_room(self, room, nick):
+        self.plugin['xep_0045'].joinMUC(
+            room,
+            nick,
+            pstatus='Hello world!',
+            pfrom=self.boundjid.full,
+            wait=True)
+
+        self.plugin['xep_0045'].setAffiliation(
+            room, self.boundjid.full, affiliation='owner')
+
+        self.plugin['xep_0045'].configureRoom(room, ifrom=self.boundjid.full)
+
     def leave_room(self, room, nick):
         self.plugin['xep_0045'].leaveMUC(room, nick)
 
     def send_groupchat_message(self, to, message):
-
         try:
             self.send_message(
                 mto=to,
@@ -215,6 +231,7 @@ class User():
         self.name = name
         self.show = show
         self.status = status
+        self.subscription = subscription
         self.messages = []
 
     def update_data(self, status, show):
@@ -226,9 +243,9 @@ class User():
 
     def add_message_to_list(self, msg):
         self.messages.append(msg)
-    
+
     def clean_unread_messages(self):
         self.messages = []
-    
+
     def get_messages(self):
         return self.messages
