@@ -60,9 +60,10 @@ def handle_session(event):
 
         # OPTION 1: Show connected users
         if option == '1':
-            print(f'\n{BOLD}My roster:{ENDC}')
-            roster = xmpp.get_user_dict()
-            print_users_connection(roster)
+            # print(f'\n{BOLD}My roster:{ENDC}')
+            # roster = xmpp.get_user_dict()
+            # print_users_connection(roster)
+            xmpp.get_all_online()
 
         # OPTION 2: Add a user to my contact list
         elif option == '2':
@@ -239,6 +240,7 @@ if __name__ == "__main__":
             xmpp.register_plugin('xep_0004')
             xmpp.register_plugin('xep_0066')
             xmpp.register_plugin('xep_0077')
+            xmpp.register_plugin('xep_0050')
             xmpp.register_plugin('xep_0045')  # Groupchat
             xmpp['xep_0077'].force_registration = True
             xmpp.add_event_handler(

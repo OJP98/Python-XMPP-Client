@@ -4,6 +4,7 @@ import getpass
 import threading
 from sleekxmpp import ClientXMPP
 from sleekxmpp.exceptions import IqError, IqTimeout
+from xml.etree import cElementTree as ET
 from bcolors import OKGREEN, OKBLUE, WARNING, FAIL, ENDC
 
 
@@ -199,6 +200,61 @@ class Client(ClientXMPP, threading.Thread):
             return True
         except:
             return False
+
+    def get_all_online(self):
+
+        resp = self.Iq()
+        resp.set_type('set')
+        resp.set_from(self.boundjid.full)
+        resp.set_to('search.redes2020.xyz')
+        # resp.set_query('jabber:iq:search')
+        resp['id'] = 'search1'
+
+        query = ET.Element('{jabber:iq:search}query')
+        email = ET.Element('email')
+        email.text = '*'
+        query.append(email)
+
+        nick = ET.Element('nick')
+        nick.text = '*'
+        query.append(nick)
+
+        first = ET.Element('first')
+        first.text = '*'
+        query.append(first)
+
+        last = ET.Element('last')
+        last.text = '*'
+        query.append(last)
+        resp.appendxml(query)
+
+        # username = ET.Element('username')
+        # username.text = '*'
+        # query.append(username)
+
+        # resp.append()
+        # resp['query']['name'] = True
+        print('getting...')
+
+        respuesta = resp.send(now=True)
+        print(f'{OKGREEN}search made! {self.boundjid}{ENDC}')
+
+        # iq = self['xep_0050'].send_command(
+        #     self.default_domain, "http://jabber.org/protocol/admin#get-online-users-list")
+
+        # sessionid = iq['command']['sessionid']
+
+        # form = self.plugin['xep_0004'].make_form(ftype='submit')
+        # field = form.add_field(
+        #     ftype='hidden',
+        #     type='hidden',
+        #     var='FORM_TYPE',
+        #     value='ADMIN')
+        # field['type'] = 'hidden'
+        # form.add_field(var='max_items', value='100')
+
+        # print(self['xep_0050'].send_command(
+        #     self.default_domain, "http://jabber.org/protocol/admin#get-online-users-list", sessionid=sessionid, payload=form))
 
 
 class RegisterBot(ClientXMPP):
