@@ -6,6 +6,7 @@ FAIL = '\033[91m' + 'FAIL: '
 ENDC = '\033[0m'
 BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
+BLUE = '\033[94m'
 
 # Menu messages
 login_menu = f"""
@@ -18,7 +19,7 @@ login_menu = f"""
 
 main_menu = f"""
 {HEADER}==============| MAIN MENU |=============={ENDC}
-1. Show all connected users
+1. Show all connected users & my contact list
 2. Add a user to my contact list
 3. Show contact details
 4. Private chat
@@ -37,6 +38,7 @@ group_options = f"""
 \t2. Join a group chat
 \t3. Send message to group
 \t4. Exit a group chat
+\t5. Cancel
 """
 
 show_options = f"""
