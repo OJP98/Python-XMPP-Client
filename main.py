@@ -11,13 +11,13 @@ from bcolors import *
 
 close_login = False
 
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(levelname)-8s %(message)s')
 
 # Prints a table with every user and its index
 
 
-def print_user_index(user_dict):
+def print_contact_index(user_dict):
     table = PrettyTable(border=False)
     table.field_names = [f'{BOLD}No. {ENDC}', f'{BOLD}JID{ENDC}']
     table.align = 'l'
@@ -25,6 +25,19 @@ def print_user_index(user_dict):
     for jid in user_dict.keys():
         table.add_row([counter, jid])
         counter += 1
+
+    print(table)
+
+
+def print_all_users(user_dict):
+    table = PrettyTable(border=False)
+    table.field_names = [f'{BOLD}USERNAME{ENDC}',
+                         f'{BOLD}NAME{ENDC}',
+                         f'{BOLD}EMAIL{ENDC}',
+                         f'{BOLD}JID{ENDC}']
+    table.align = 'l'
+    for jid, user_info in user_dict.items():
+        table.add_row([user_info[0], user_info[1], user_info[2], jid])
 
     print(table)
 
@@ -60,10 +73,14 @@ def handle_session(event):
 
         # OPTION 1: Show connected users
         if option == '1':
-            # print(f'\n{BOLD}My roster:{ENDC}')
-            # roster = xmpp.get_user_dict()
-            # print_users_connection(roster)
-            xmpp.get_all_online()
+            print(f'\n{BOLD}Every user un this server:{ENDC}\n')
+            users = xmpp.get_all_online()
+            print_all_users(users)
+
+            print(f'\n{BLUE}========================================={ENDC}')
+            print(f'\n{BOLD}My roster:{ENDC}\n')
+            roster = xmpp.get_user_dict()
+            print_users_connection(roster)
 
         # OPTION 2: Add a user to my contact list
         elif option == '2':
@@ -80,7 +97,7 @@ def handle_session(event):
             users = list(roster.keys())
 
             # Print table of users with their index
-            print_user_index(roster)
+            print_contact_index(roster)
             recipient = input('\nEnter recipient index: ')
 
             try:
@@ -150,6 +167,11 @@ def handle_session(event):
 
                 xmpp.leave_room(room, nick)
                 print(f'{OKGREEN}You left the group.{ENDC}')
+            
+
+            # 5. Cancel
+            elif group_option == '5':
+                continue
 
             # Invalid option
             else:

@@ -5,6 +5,8 @@ import threading
 from sleekxmpp import ClientXMPP
 from sleekxmpp.exceptions import IqError, IqTimeout
 from xml.etree import cElementTree as ET
+from sleekxmpp.plugins.xep_0004.stanza.field import FormField, FieldOption
+from sleekxmpp.plugins.xep_0004.stanza.form import Form
 from bcolors import OKGREEN, OKBLUE, WARNING, FAIL, ENDC
 
 
@@ -17,6 +19,7 @@ class Client(ClientXMPP, threading.Thread):
         ClientXMPP.__init__(self, jid, password)
         self.auto_authorize = True
         self.auto_subscribe = True
+        self.contact_dict = {}
         self.user_dict = {}
 
         # self.add_event_handler('session_start', self.session_start)
@@ -41,6 +44,14 @@ class Client(ClientXMPP, threading.Thread):
         self.send_presence()
 
     def create_user_dict(self, wait=False):
+
+        try:
+            self.get_roster(block=True)
+        except IqError as err:
+            print('Error: %s' % err.iq['error']['condition'])
+        except IqTimeout:
+            print('Error: Request timed out')
+
         groups = self.client_roster.groups()
         for group in groups:
             for jid in groups[group]:
@@ -69,23 +80,23 @@ class Client(ClientXMPP, threading.Thread):
                             status = pres['status']
 
                         # Check if the user is in the dict, else add it
-                        if not jid in self.user_dict:
-                            self.user_dict[jid] = User(
+                        if not jid in self.contact_dict:
+                            self.contact_dict[jid] = User(
                                 jid, name, show, status, sub)
                         else:
-                            self.user_dict[jid].update_data(status, show)
+                            self.contact_dict[jid].update_data(status, show)
 
                 # User is not connected, still add him to the dict
                 else:
-                    if not jid in self.user_dict:
-                        self.user_dict[jid] = User(
+                    if not jid in self.contact_dict:
+                        self.contact_dict[jid] = User(
                             jid, name, 'offline', '', sub)
 
     # Returns a dict jid - User. If it's empty, create it.
     def get_user_dict(self):
-        if not self.user_dict:
+        if not self.contact_dict:
             self.create_user_dict()
-        return self.user_dict
+        return self.contact_dict
 
     # Create user dict on new presence
     def wait_for_presences(self, pres):
@@ -104,10 +115,10 @@ class Client(ClientXMPP, threading.Thread):
         if msg['type'] in ('chat', 'normal'):
             print(f'New message from {sender}')
 
-            if not sender in self.user_dict:
-                self.user_dict[sender] = User(sender, '', '', '', '')
+            if not sender in self.contact_dict:
+                self.contact_dict[sender] = User(sender, '', '', '', '')
 
-            self.user_dict[sender].add_message_to_list(msg['body'])
+            self.contact_dict[sender].add_message_to_list(msg['body'])
 
             # msg.reply('Thanks for sending\n%(body)s' % msg).send()
 
@@ -122,6 +133,7 @@ class Client(ClientXMPP, threading.Thread):
         self.send_presence_subscription(pto=username,
                                         ptype='subscribe',
                                         pfrom=self.boundjid.bare)
+        
         print(f'{OKBLUE}Subscribed to {username}!{ENDC}')
 
     def new_presence_subscribed(self, presence):
@@ -147,8 +159,8 @@ class Client(ClientXMPP, threading.Thread):
 
     def presence_offline(self, presence):
         new_presence = str(presence['from']).split('/')[0]
-        if self.boundjid.bare != new_presence and new_presence in self.user_dict:
-            self.user_dict[new_presence].update_data(
+        if self.boundjid.bare != new_presence and new_presence in self.contact_dict:
+            self.contact_dict[new_presence].update_data(
                 '', presence['type'])
 
     def presence_message(self, show, status):
@@ -162,8 +174,8 @@ class Client(ClientXMPP, threading.Thread):
             mbody=message,
             mtype='chat',
             mfrom=self.boundjid.bare)
-        if recipient in self.user_dict:
-            self.user_dict[recipient].clean_unread_messages()
+        if recipient in self.contact_dict:
+            self.contact_dict[recipient].clean_unread_messages()
 
     def join_room(self, room, nick):
         self.plugin['xep_0045'].joinMUC(
@@ -203,58 +215,114 @@ class Client(ClientXMPP, threading.Thread):
 
     def get_all_online(self):
 
-        resp = self.Iq()
-        resp.set_type('set')
-        resp.set_from(self.boundjid.full)
-        resp.set_to('search.redes2020.xyz')
-        # resp.set_query('jabber:iq:search')
-        resp['id'] = 'search1'
+        iq = self.Iq()
+
+        iq.set_from(self.boundjid.full)
+        iq.set_to('search.'+self.boundjid.domain)
+        iq.set_type('get')
+        iq.set_query('jabber:iq:search')
+
+        resp = iq.send(now=True)
+
+        form = Form()
+        form.set_type('submit')
+        
+        # FORM TYPE
+        form.add_field(
+            var='FORM_TYPE',
+            ftype='hidden',
+            type='hidden',
+            value='jabber:iq:search'
+            )
+        
+        # SEARCH LABEL
+        form.add_field(
+            var='search',
+            ftype='text-single',
+            type='text-single',
+            label='Search',
+            required=True,
+            value='*'
+            )
+        
+        # USERNAME
+        form.add_field(
+            var='Username',
+            ftype='boolean',
+            type='boolean',
+            label='Username',
+            value=1
+            )
+        
+        # NAME 
+        form.add_field(
+            var='Name',
+            ftype='boolean',
+            type='boolean',
+            label='Name',
+            value=1
+            )
+        
+        # EMAIL
+        form.add_field(
+            var='Email',
+            ftype='boolean',
+            type='boolean',
+            label='Email',
+            value=1
+            )
+
+        search = self.Iq()
+        search.set_type('set')
+        search.set_to('search.'+self.boundjid.domain)
+        search.set_from(self.boundjid.full)
 
         query = ET.Element('{jabber:iq:search}query')
-        email = ET.Element('email')
-        email.text = '*'
-        query.append(email)
+        query.append(form.xml)
+        search.append(query)
+        results = search.send(now=True, block=True)
 
-        nick = ET.Element('nick')
-        nick.text = '*'
-        query.append(nick)
+        root = ET.fromstring(str(results))
 
-        first = ET.Element('first')
-        first.text = '*'
-        query.append(first)
+        items = []
+        for child in root:
+            for grandchild in child:
+                for grangrandchild in grandchild:
+                    items.append(grangrandchild)
+        
+        for item in items:
+            jid = ''
+            email = ''
+            name = ''
+            username = ''
 
-        last = ET.Element('last')
-        last.text = '*'
-        query.append(last)
-        resp.appendxml(query)
+            childrens = item.getchildren()
+            
+            if len(childrens) > 0:
+                
+                for field in childrens:
+                    try:
+                        child = field.getchildren()[0]
+                    except:
+                        continue
 
-        # username = ET.Element('username')
-        # username.text = '*'
-        # query.append(username)
+                    if field.attrib['var'] == 'Email':
+                        email = child.text if child.text else '---'
 
-        # resp.append()
-        # resp['query']['name'] = True
-        print('getting...')
+                    elif field.attrib['var'] == 'jid':
+                        jid = child.text if child.text else '---'
 
-        respuesta = resp.send(now=True)
-        print(f'{OKGREEN}search made! {self.boundjid}{ENDC}')
+                    elif field.attrib['var'] == 'Name':
+                        name = child.text if child.text else '---'
+                    
+                    elif field.attrib['var'] == 'Username':
+                        username = child.text if child.text else '---'
 
-        # iq = self['xep_0050'].send_command(
-        #     self.default_domain, "http://jabber.org/protocol/admin#get-online-users-list")
-
-        # sessionid = iq['command']['sessionid']
-
-        # form = self.plugin['xep_0004'].make_form(ftype='submit')
-        # field = form.add_field(
-        #     ftype='hidden',
-        #     type='hidden',
-        #     var='FORM_TYPE',
-        #     value='ADMIN')
-        # field['type'] = 'hidden'
-        # form.add_field(var='max_items', value='100')
-
-        # print(self['xep_0050'].send_command(
-        #     self.default_domain, "http://jabber.org/protocol/admin#get-online-users-list", sessionid=sessionid, payload=form))
+                if jid:
+                    self.user_dict[jid] = [username, name, email]
+        
+        return self.user_dict
+        
 
 
 class RegisterBot(ClientXMPP):
