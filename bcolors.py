@@ -7,29 +7,30 @@ ENDC = '\033[0m'
 BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
 BLUE = '\033[94m'
+RED = '\033[91m'
 
 # Menu messages
 login_menu = f"""
-{HEADER}==============| LOGIN MENU |=============={ENDC}
+{HEADER}|=================| LOGIN MENU |=================|{ENDC}
 1. Register a new account
 2. Log into an account
 3. Exit
-{HEADER}=========================================={ENDC}
+{HEADER}|================================================|{ENDC}
 """
 
 main_menu = f"""
-{HEADER}==============| MAIN MENU |=============={ENDC}
+{HEADER}|=================| MAIN MENU |=================|{ENDC}
 1. Show all connected users & my contact list
 2. Add a user to my contact list
-3. Show contact details
+3. Show user details
 4. Private chat
 5. Group chat
 6. Presence message
-7. Log out
-8. Delete my account
-9. Send notifiction
-10. Send file
-{HEADER}========================================={ENDC}
+7. Send file
+8. Log out
+9. Delete my account
+10?. Send notifiction
+{HEADER}|===============================================|{ENDC}
 """
 
 group_options = f"""

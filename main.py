@@ -14,23 +14,26 @@ close_login = False
 logging.basicConfig(level=logging.INFO,
                     format='%(levelname)-8s %(message)s')
 
+
 # Prints a table with every user and its index
-
-
 def print_contact_index(user_dict):
     table = PrettyTable(border=False)
-    table.field_names = [f'{BOLD}No. {ENDC}', f'{BOLD}JID{ENDC}']
+    table.field_names = [f'{BOLD}No. {ENDC}',
+                         f'{BOLD}USERNAME{ENDC}',
+                         f'{BOLD}SHOW{ENDC}',
+                         f'{BOLD}JID{ENDC}']
     table.align = 'l'
     counter = 1
-    for jid in user_dict.keys():
-        table.add_row([counter, jid])
+    for jid, user in user_dict.items():
+        user_info = user.get_connection_data()
+        table.add_row([counter, user_info[0], user_info[1], jid])
         counter += 1
 
     print(table)
 
 
 def print_all_users(user_dict):
-    table = PrettyTable(border=False)
+    table = PrettyTable()
     table.field_names = [f'{BOLD}USERNAME{ENDC}',
                          f'{BOLD}NAME{ENDC}',
                          f'{BOLD}EMAIL{ENDC}',
@@ -41,26 +44,45 @@ def print_all_users(user_dict):
 
     print(table)
 
-# Prints a table with every user and its connection data
-
 
 def print_users_connection(user_dict):
-    table = PrettyTable(border=False)
-    table.field_names = [f'{BOLD}JID{ENDC}',
+    # Prints a table with every user and its connection data
+    table = PrettyTable()
+    table.field_names = [f'{BOLD}USER{ENDC}',
                          f'{BOLD}SHOW{ENDC}',
-                         f'{BOLD}STATUS{ENDC}']
+                         f'{BOLD}STATUS{ENDC}',
+                         f'{BOLD}JID{ENDC}']
     table.align = 'l'
     for jid, user in user_dict.items():
         user_data = user.get_connection_data()
-        user_data.insert(0, jid)
+        user_data.append(jid)
         table.add_row(user_data)
 
     table.sortby = f'{BOLD}SHOW{ENDC}'
     print(table)
 
+
+def print_user_data(users, amount):
+    # Prints a table with every user and its connection data
+    table = PrettyTable(border=False)
+    table.field_names = [f'{BOLD}EMAIL{ENDC}',
+                         f'{BOLD}JID{ENDC}',
+                         f'{BOLD}USERNAME{ENDC}',
+                         f'{BOLD}NAME{ENDC}']
+    table.align = 'l'
+    counter = 0
+    user_data = []
+    for data in users:
+        counter += 1
+        user_data.append(data)
+        if counter % 4 == 0:
+            table.add_row(user_data)
+            user_data = []
+
+    print(table)
+
+
 # Hanldes the client once the user logged in
-
-
 def handle_session(event):
     close_session = False
     xmpp.session_start()
@@ -73,11 +95,12 @@ def handle_session(event):
 
         # OPTION 1: Show connected users
         if option == '1':
-            print(f'\n{BOLD}Every user un this server:{ENDC}\n')
+            print(f'\n{BOLD}Every user on this server:{ENDC}\n')
             users = xmpp.get_all_online()
             print_all_users(users)
 
-            print(f'\n{BLUE}========================================={ENDC}')
+            print(
+                f'\n{BLUE}|================================================|{ENDC}')
             print(f'\n{BOLD}My roster:{ENDC}\n')
             roster = xmpp.get_user_dict()
             print_users_connection(roster)
@@ -87,6 +110,17 @@ def handle_session(event):
             print(f'\n{BOLD}Add user to contact list{ENDC}')
             user_jid = input('Enter user jid: ')
             xmpp.add_user(user_jid)
+
+        # OPTION 3: Get user details
+        elif option == '3':
+            username = input('Enter a username to search: ')
+
+            user_data, amount = xmpp.get_user_data(username)
+
+            if not user_data:
+                print(f'{RED}User not found...{ENDC}')
+            else:
+                print_user_data(user_data, amount)
 
         # OPTION 4: Private session
         elif option == '4':
@@ -108,14 +142,17 @@ def handle_session(event):
                 print(invalid_option)
                 continue
 
-            print(
-                f'\nRecipient is: {dest}\nThe unread messages from this user are:')
-            for msg in roster[dest].get_messages():
-                print(f'\t--> {msg}')
+            received_messages = roster[dest].get_messages()
+            if received_messages:
+                print(
+                    f'\nRecipient is: {dest}\nThe unread messages from this user are:')
+                for msg in received_messages:
+                    print(f'\t--> {msg}')
 
             new_message = input('Enter a message: ')
             xmpp.send_session_message(dest, new_message)
 
+        # OPTION 5: Group chat options
         elif option == '5':
 
             print(group_options)
@@ -167,7 +204,6 @@ def handle_session(event):
 
                 xmpp.leave_room(room, nick)
                 print(f'{OKGREEN}You left the group.{ENDC}')
-            
 
             # 5. Cancel
             elif group_option == '5':
@@ -199,14 +235,34 @@ def handle_session(event):
             xmpp.presence_message(show, status)
             print(f'{OKGREEN}Presence message sent!{ENDC}')
 
-        # OPTION 9: Log out.
+        # OPTION 7: Send a file
         elif option == '7':
+            print(f'{BOLD}Send a file{ENDC}')
+            # Get updated roster
+            roster = xmpp.get_user_dict()
+            # Get all users as list
+            users = list(roster.keys())
+            # Print table of users with their index
+            print_contact_index(roster)
+            # Ask for input
+            recipient = input('\nEnter recipient index: ')
+
+            try:
+                # Check if user index was correct
+                dest = users[int(recipient)-1]
+            except:
+                # Else, repeat
+                print(invalid_option)
+                continue
+
+        # OPTION 8: Log out.
+        elif option == '8':
             print(f'\n{BOLD}Logging out of {xmpp.boundjid.bare}{ENDC}')
             xmpp.disconnect()
             close_session = True
 
-        # OPTION 10: Delete account from server.
-        elif option == '8':
+        # OPTION 9: Delete account from server.
+        elif option == '9':
             print(f'\n{WARNING}Deleting account: {xmpp.boundjid.bare}{ENDC}')
             xmpp.delete_account()
             xmpp.disconnect()
@@ -263,6 +319,7 @@ if __name__ == "__main__":
             xmpp.register_plugin('xep_0066')
             xmpp.register_plugin('xep_0077')
             xmpp.register_plugin('xep_0050')
+            xmpp.register_plugin('xep_0231')
             xmpp.register_plugin('xep_0045')  # Groupchat
             xmpp['xep_0077'].force_registration = True
             xmpp.add_event_handler(
