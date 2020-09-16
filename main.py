@@ -45,12 +45,13 @@ def print_all_users(user_dict):
     print(table)
 
 
-def print_users_connection(user_dict):
+def print_contacts(user_dict):
     # Prints a table with every user and its connection data
     table = PrettyTable()
     table.field_names = [f'{BOLD}USER{ENDC}',
                          f'{BOLD}SHOW{ENDC}',
                          f'{BOLD}STATUS{ENDC}',
+                         f'{BOLD}SUBSCRIPTION{ENDC}',
                          f'{BOLD}JID{ENDC}']
     table.align = 'l'
     for jid, user in user_dict.items():
@@ -103,7 +104,7 @@ def handle_session(event):
                 f'\n{BLUE}|================================================|{ENDC}')
             print(f'\n{BOLD}My roster:{ENDC}\n')
             roster = xmpp.get_user_dict()
-            print_users_connection(roster)
+            print_contacts(roster)
 
         # OPTION 2: Add a user to my contact list
         elif option == '2':
@@ -310,6 +311,8 @@ if __name__ == "__main__":
             # password = getpass('Enter your password: ')
             # username = 'jua17315@redes2020.xyz'
             # password = 'jua17315'
+            # username = 'testing@redes2020.xyz'
+            # password = 'testing'
             username = 'testing@redes2020.xyz'
             password = 'testing'
 

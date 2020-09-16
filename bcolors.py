@@ -29,7 +29,6 @@ main_menu = f"""
 7. Send file
 8. Log out
 9. Delete my account
-10?. Send notifiction
 {HEADER}|===============================================|{ENDC}
 """
 

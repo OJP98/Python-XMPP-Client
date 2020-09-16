@@ -380,14 +380,10 @@ class Client(ClientXMPP, threading.Thread):
         # Send de IQ and get the results
         results = search.send(now=True, block=True)
 
-        for i in results.findall('.//{jabber:x:data}value'):
-            if i.text:
-                print(i.text)
-
         # Parse the results so it can be used as an XML tree
-        # root = ET.fromstring(str(results))
+        root = ET.fromstring(str(results))
         # Process the XML in a dedicated function
-        # self.update_user_dict(root)
+        self.update_user_dict(root)
 
         # Finally, return all the list of users
         return self.user_dict
@@ -479,7 +475,7 @@ class User():
         self.show = show
 
     def get_connection_data(self):
-        return [self.username, self.show, self.status]
+        return [self.username, self.show, self.status, self.subscription]
 
     def add_message_to_list(self, msg):
         self.messages.append(msg)
