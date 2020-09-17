@@ -11,7 +11,7 @@ from bcolors import *
 
 close_login = False
 
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(levelname)-8s %(message)s')
 
 
@@ -133,20 +133,25 @@ def handle_session(event):
 
             # Print table of users with their index
             print_contact_index(roster)
-            recipient = input('\nEnter recipient index: ')
+            recipient = input('\nEnter recipient index or jid: ')
 
-            try:
-                # Check if user index was correct
-                dest = users[int(recipient)-1]
-            except:
-                # Else, repeat
-                print(invalid_option)
-                continue
+            if '@' in recipient:
+                dest = recipient
+
+            else:
+                try:
+                    recipient = int(recipient)
+                    # Check if user index was correct
+                    dest = users[recipient-1]
+                except ValueError:
+                    # Else, repeat
+                    print(invalid_option)
+                    continue
 
             received_messages = roster[dest].get_messages()
             if received_messages:
                 print(
-                    f'\nRecipient is: {dest}\nThe unread messages from this user are:')
+                    f'\nThe unread message(s) from {dest} are:')
                 for msg in received_messages:
                     print(f'\t--> {msg}')
 
@@ -256,6 +261,8 @@ def handle_session(event):
                 print(invalid_option)
                 continue
 
+            xmpp.send_file()
+
         # OPTION 8: Log out.
         elif option == '8':
             print(f'\n{BOLD}Logging out of {xmpp.boundjid.bare}{ENDC}')
@@ -311,20 +318,11 @@ if __name__ == "__main__":
             # password = getpass('Enter your password: ')
             # username = 'jua17315@redes2020.xyz'
             # password = 'jua17315'
-            # username = 'testing@redes2020.xyz'
-            # password = 'testing'
             username = 'testing@redes2020.xyz'
             password = 'testing'
 
             xmpp = client.Client(username, password)
-            xmpp.register_plugin('xep_0030')
-            xmpp.register_plugin('xep_0004')
-            xmpp.register_plugin('xep_0066')
-            xmpp.register_plugin('xep_0077')
-            xmpp.register_plugin('xep_0050')
-            xmpp.register_plugin('xep_0231')
-            xmpp.register_plugin('xep_0045')  # Groupchat
-            xmpp['xep_0077'].force_registration = True
+
             xmpp.add_event_handler(
                 "session_start", handle_session, threaded=True)
             if xmpp.connect():

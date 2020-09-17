@@ -10,9 +10,7 @@ from sleekxmpp.plugins.xep_0004.stanza.form import Form
 from bcolors import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE
 
 
-class Client(ClientXMPP, threading.Thread):
-
-    print_lock = threading.Lock()
+class Client(ClientXMPP):
 
     def __init__(self, jid, password):
 
@@ -31,6 +29,18 @@ class Client(ClientXMPP, threading.Thread):
         self.add_event_handler("got_offline", self.presence_offline)
         self.add_event_handler("got_online", self.presence_online)
         self.add_event_handler('changed_status', self.wait_for_presences)
+
+        self.register_plugin('xep_0030')
+        self.register_plugin('xep_0004')
+        self.register_plugin('xep_0066')
+        self.register_plugin('xep_0077')
+        self.register_plugin('xep_0050')
+        self.register_plugin('xep_0047')
+        self.register_plugin('xep_0231')
+        self.register_plugin('xep_0045')
+        self.register_plugin('xep_0096')
+        self['xep_0077'].force_registration = True
+
         self.received = set()
         self.presences_received = threading.Event()
 
@@ -44,6 +54,7 @@ class Client(ClientXMPP, threading.Thread):
 
         self.send_presence()
 
+    # Create a new user dict
     def create_user_dict(self, wait=False):
 
         try:
@@ -110,30 +121,44 @@ class Client(ClientXMPP, threading.Thread):
 
         self.create_user_dict()
 
+    # Act upon a received message
     def received_message(self, msg):
 
         sender = str(msg['from'])
-        username = sender.split('/')[0]
+        jid = sender.split('/')[0]
+        username = jid.split('@')[0]
         if msg['type'] in ('chat', 'normal'):
-            print(f'New message from {username}')
+            print(f'New message from {jid}')
 
-            if not sender in self.contact_dict:
-                self.contact_dict[sender] = User(
-                    sender, '', '', '', '', username)
+            if not jid in self.contact_dict:
+                self.contact_dict[jid] = User(
+                    jid, '', '', '', '', username)
 
-            self.contact_dict[sender].add_message_to_list(msg['body'])
+            self.contact_dict[jid].add_message_to_list(msg['body'])
 
-    def send_bob(self):
-        # TODO
-        print('send')
+    def send_file(self):
+        req = self.plugin['xep_0096'].request_file_transfer(
+            jid='jua17315@redes2020.xyz/7jwu5cm01j',
+            name='test.txt',
+            size=1022,
+            mime_type='text/plain',
+            sid='file1',
+            desc='Este es un texto de prueba',
+            # date='2020-09-16 23:34:46.992163',
+            # hash='552da749930852c69ae5d2141d3766b1'
+        )
+        print(req)
 
+    # Act when logged out/disconnected
     def got_disconnected(self, event):
         print(f'{OKBLUE}Logged out from the current session{ENDC}')
 
+    # Act when authentication fails
     def on_failed_auth(self, event):
         print(f'{FAIL}Credentials are not correct.{ENDC}')
         self.disconnect()
 
+    # Add a user from his jid
     def add_user(self, jid):
         self.send_presence_subscription(pto=jid,
                                         ptype='subscribe',
@@ -144,6 +169,7 @@ class Client(ClientXMPP, threading.Thread):
                 jid, '', '', '', '', str(jid.split('@')[0]))
         print(f'{OKBLUE}Subscribed to {jid}!{ENDC}')
 
+    # Search for a user by his username
     def get_user_data(self, username):
         # Create the user search IQ
         iq = self.Iq()
@@ -214,10 +240,12 @@ class Client(ClientXMPP, threading.Thread):
 
         return [value.text if value.text else 'N/A' for value in res_values], amount
 
+    # Act when a new presence subscribes to you
     def new_presence_subscribed(self, presence):
         print('PRESENCE SUBSCRIBED!')
         print(presence)
 
+    # Delete account from server
     def delete_account(self):
         resp = self.Iq()
         resp['type'] = 'set'
@@ -235,12 +263,14 @@ class Client(ClientXMPP, threading.Thread):
             logging.error('No response from server.')
             self.disconnect()
 
+    # Act when a contact gets offline
     def presence_offline(self, presence):
         new_presence = str(presence['from']).split('/')[0]
         if self.boundjid.bare != new_presence and new_presence in self.contact_dict:
             self.contact_dict[new_presence].update_data(
                 '', presence['type'])
 
+    # Act when a contact gets online
     def presence_online(self, presence):
         new_presence = str(presence['from']).split('/')[0]
 
@@ -254,9 +284,11 @@ class Client(ClientXMPP, threading.Thread):
         except:
             pass
 
+    # Send a presence message with its show and status
     def presence_message(self, show, status):
         self.send_presence(pshow=show, pstatus=status)
 
+    # Send a message to someone directly
     def send_session_message(self, recipient, message):
         self.send_message(
             mto=recipient,
@@ -268,6 +300,7 @@ class Client(ClientXMPP, threading.Thread):
 
         print(f'{OKGREEN} Message sent!{ENDC}')
 
+    # Join an existing room
     def join_room(self, room, nick):
         self.plugin['xep_0045'].joinMUC(
             room,
@@ -276,6 +309,7 @@ class Client(ClientXMPP, threading.Thread):
             pfrom=self.boundjid.full,
             wait=True)
 
+    # Create a new room with its name and nick
     def create_new_room(self, room, nick):
         self.plugin['xep_0045'].joinMUC(
             room,
@@ -289,9 +323,11 @@ class Client(ClientXMPP, threading.Thread):
 
         self.plugin['xep_0045'].configureRoom(room, ifrom=self.boundjid.full)
 
+    # Leave a room
     def leave_room(self, room, nick):
         self.plugin['xep_0045'].leaveMUC(room, nick)
 
+    # Send a message to a room
     def send_groupchat_message(self, to, message):
         try:
             self.send_message(
@@ -304,6 +340,7 @@ class Client(ClientXMPP, threading.Thread):
         except:
             return False
 
+    # Get all online users
     def get_all_online(self):
 
         # Create the user search IQ
@@ -388,6 +425,7 @@ class Client(ClientXMPP, threading.Thread):
         # Finally, return all the list of users
         return self.user_dict
 
+    # Update user dictionary (from search)
     def update_user_dict(self, xmlObject):
         # Items to be iterated
         items = []
