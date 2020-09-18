@@ -1,12 +1,15 @@
+import os
 import time
 import logging
 import getpass
 import threading
+import base64
 from sleekxmpp import ClientXMPP
 from sleekxmpp.exceptions import IqError, IqTimeout
 from xml.etree import cElementTree as ET
 from sleekxmpp.plugins.xep_0004.stanza.field import FormField, FieldOption
 from sleekxmpp.plugins.xep_0004.stanza.form import Form
+from sleekxmpp.plugins.xep_0047.stream import IBBytestream
 from bcolors import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE, RED
 
 
@@ -33,6 +36,8 @@ class Client(ClientXMPP):
         # FILE TRANSFER
         self.add_event_handler('si_request', self.on_si_request)
         self.add_event_handler('ibb_stream_start', self.on_stream_start)
+        self.add_event_handler("ibb_stream_data", self.stream_data)
+        self.add_event_handler("ibb_stream_end", self.stream_closed)
 
         self.register_plugin('xep_0030')
         self.register_plugin('xep_0004')
@@ -42,9 +47,9 @@ class Client(ClientXMPP):
         self.register_plugin('xep_0047')
         self.register_plugin('xep_0231')
         self.register_plugin('xep_0045')
-        self.register_plugin('xep_0095') # Offer and accept a file transfer
-        self.register_plugin('xep_0096') # Offer and accept a file transfer
-        self.register_plugin('xep_0047') # Bytestreams
+        self.register_plugin('xep_0095')  # Offer and accept a file transfer
+        self.register_plugin('xep_0096')  # Offer and accept a file transfer
+        self.register_plugin('xep_0047')  # Bytestreams
 
         self['xep_0077'].force_registration = True
 
@@ -89,9 +94,6 @@ class Client(ClientXMPP):
                     # Go through each connection
                     for res, pres in connections.items():
 
-                        if res:
-                            print(res)
-
                         show = 'available'
                         status = ''
                         if pres['show']:
@@ -104,7 +106,8 @@ class Client(ClientXMPP):
                             self.contact_dict[jid] = User(
                                 jid, name, show, status, sub, username, res)
                         else:
-                            self.contact_dict[jid].update_data(status, show, res)
+                            self.contact_dict[jid].update_data(
+                                status, show, res)
 
                 # User is not connected, still add him to the dict
                 else:
@@ -144,6 +147,11 @@ class Client(ClientXMPP):
             self.contact_dict[jid].add_message_to_list(msg['body'])
 
     def request_si(self, user_jid):
+
+        file_path = input('Enter the file path: ')
+        data = open(file_path, 'rb').read()
+        data_encoded = base64.b64encode(data).decode('utf-8')
+
         dest = self.contact_dict[user_jid].get_full_jid()
         req = self.plugin['xep_0096'].request_file_transfer(
             jid=dest,
@@ -156,9 +164,14 @@ class Client(ClientXMPP):
             hash='552da749930852c69ae5d2141d3766b1'
         )
 
-        time.sleep(3)
+        time.sleep(2)
 
-        self.start_file_streaming(dest)
+        stream = self.plugin['xep_0047'].open_stream(
+            jid=dest, sid='file1', ifrom=self.boundjid.full)
+
+        stream.sendall(data_encoded)
+
+        stream.close()
 
     def on_si_request(self, iq):
 
@@ -183,7 +196,7 @@ class Client(ClientXMPP):
             desc = desc.text
         except:
             desc = None
-        
+
         print(f'{RED}================| FILE REQUEST RECEIVED |================{ENDC}')
         print(f'''
         {RED}{sender} is going to send you a file: {ENDC}
@@ -192,19 +205,28 @@ class Client(ClientXMPP):
             - size: {file_size}
             - date: {file_date}
         ''')
-        if desc: print(f'\t\tDescription: {desc}')
+        if desc:
+            print(f'\t\tDescription: {desc}')
 
         # Accept the file requested
         self.plugin['xep_0095'].accept(jid=iq.get_from().full, sid=file_id)
 
-    def start_file_streaming(self, jid):
-        self.plugin['xep_0047'].open_stream(jid=jid, sid='file1', ifrom=self.boundjid.full)
-    
-    def on_stream_start(self, iq):
-        print(iq)
+    def on_stream_start(self, stream):
         print('About to start streaming the file')
 
+    def stream_data(self, stream):
+        b64_data = stream['data'].encode('utf-8')
+        decoded_data = base64.decodebytes(b64_data)
+        print(decoded_data)
+        # with open('decoded_image.png', 'wb') as file_to_save:
+        #     decoded_image_data = base64.decodebytes(base64_img_bytes)
+        #     file_to_save.write(decoded_image_data)
+
+    def stream_closed(self, stream):
+        print('Stream closed: %s from %s' % (stream.sid, stream.peer_jid))
+
     # Act when logged out/disconnected
+
     def got_disconnected(self, event):
         print(f'{OKBLUE}Logged out from the current session{ENDC}')
 
@@ -581,7 +603,7 @@ class User():
 
     def get_messages(self):
         return self.messages
-      
+
     def get_full_jid(self):
         return f'{self.jid}/{self.resource}'
 

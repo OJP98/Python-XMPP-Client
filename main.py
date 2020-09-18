@@ -316,10 +316,10 @@ if __name__ == "__main__":
             print(f'\n{BOLD}Login to your account{ENDC}')
             # username = input('Enter your username: ')
             # password = getpass('Enter your password: ')
-            # username = 'jua17315@redes2020.xyz'
-            # password = 'jua17315'
-            username = 'testing@redes2020.xyz'
-            password = 'testing'
+            username = 'jua17315@redes2020.xyz'
+            password = 'jua17315'
+            # username = 'testing@redes2020.xyz'
+            # password = 'testing'
 
             xmpp = client.Client(username, password)
 
