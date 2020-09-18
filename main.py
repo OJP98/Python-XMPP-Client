@@ -261,7 +261,7 @@ def handle_session(event):
                 print(invalid_option)
                 continue
 
-            xmpp.send_file()
+            xmpp.request_si(dest)
 
         # OPTION 8: Log out.
         elif option == '8':

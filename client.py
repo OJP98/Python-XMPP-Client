@@ -7,7 +7,7 @@ from sleekxmpp.exceptions import IqError, IqTimeout
 from xml.etree import cElementTree as ET
 from sleekxmpp.plugins.xep_0004.stanza.field import FormField, FieldOption
 from sleekxmpp.plugins.xep_0004.stanza.form import Form
-from bcolors import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE
+from bcolors import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE, RED
 
 
 class Client(ClientXMPP):
@@ -30,6 +30,10 @@ class Client(ClientXMPP):
         self.add_event_handler("got_online", self.presence_online)
         self.add_event_handler('changed_status', self.wait_for_presences)
 
+        # FILE TRANSFER
+        self.add_event_handler('si_request', self.on_si_request)
+        self.add_event_handler('ibb_stream_start', self.on_stream_start)
+
         self.register_plugin('xep_0030')
         self.register_plugin('xep_0004')
         self.register_plugin('xep_0066')
@@ -38,7 +42,10 @@ class Client(ClientXMPP):
         self.register_plugin('xep_0047')
         self.register_plugin('xep_0231')
         self.register_plugin('xep_0045')
-        self.register_plugin('xep_0096')
+        self.register_plugin('xep_0095') # Offer and accept a file transfer
+        self.register_plugin('xep_0096') # Offer and accept a file transfer
+        self.register_plugin('xep_0047') # Bytestreams
+
         self['xep_0077'].force_registration = True
 
         self.received = set()
@@ -83,7 +90,7 @@ class Client(ClientXMPP):
                     for res, pres in connections.items():
 
                         if res:
-                            ''
+                            print(res)
 
                         show = 'available'
                         status = ''
@@ -95,15 +102,15 @@ class Client(ClientXMPP):
                         # Check if the user is in the dict, else add it
                         if not jid in self.contact_dict:
                             self.contact_dict[jid] = User(
-                                jid, name, show, status, sub, username)
+                                jid, name, show, status, sub, username, res)
                         else:
-                            self.contact_dict[jid].update_data(status, show)
+                            self.contact_dict[jid].update_data(status, show, res)
 
                 # User is not connected, still add him to the dict
                 else:
                     if not jid in self.contact_dict:
                         self.contact_dict[jid] = User(
-                            jid, name, 'unavailable', '', sub, username)
+                            jid, name, 'unavailable', '', sub, username, '')
 
     # Returns a dict jid - User. If it's empty, create it.
     def get_user_dict(self):
@@ -136,18 +143,66 @@ class Client(ClientXMPP):
 
             self.contact_dict[jid].add_message_to_list(msg['body'])
 
-    def send_file(self):
+    def request_si(self, user_jid):
+        dest = self.contact_dict[user_jid].get_full_jid()
         req = self.plugin['xep_0096'].request_file_transfer(
-            jid='jua17315@redes2020.xyz/7jwu5cm01j',
+            jid=dest,
             name='test.txt',
             size=1022,
             mime_type='text/plain',
             sid='file1',
             desc='Este es un texto de prueba',
-            # date='2020-09-16 23:34:46.992163',
-            # hash='552da749930852c69ae5d2141d3766b1'
+            date='2020-09-16 23:34:46.992163',
+            hash='552da749930852c69ae5d2141d3766b1'
         )
-        print(req)
+
+        time.sleep(3)
+
+        self.start_file_streaming(dest)
+
+    def on_si_request(self, iq):
+
+        # Get sender from the iq
+        sender = iq.get_from().user
+
+        # Now, si (where we can get file type)
+        payload = iq.get_payload()[0]
+        file_type = payload.get('mime-type')
+        file_id = payload.get('id')
+
+        # Get file object from payload
+        file = payload.getchildren()[0]
+        # From this, get name, size and date
+        file_name = file.get('name')
+        file_size = file.get('size')
+        file_date = file.get('date')
+
+        # Check if file has a description
+        try:
+            desc = file.getchildren()[0]
+            desc = desc.text
+        except:
+            desc = None
+        
+        print(f'{RED}================| FILE REQUEST RECEIVED |================{ENDC}')
+        print(f'''
+        {RED}{sender} is going to send you a file: {ENDC}
+            - type: {file_type}
+            - name: {file_name}
+            - size: {file_size}
+            - date: {file_date}
+        ''')
+        if desc: print(f'\t\tDescription: {desc}')
+
+        # Accept the file requested
+        self.plugin['xep_0095'].accept(jid=iq.get_from().full, sid=file_id)
+
+    def start_file_streaming(self, jid):
+        self.plugin['xep_0047'].open_stream(jid=jid, sid='file1', ifrom=self.boundjid.full)
+    
+    def on_stream_start(self, iq):
+        print(iq)
+        print('About to start streaming the file')
 
     # Act when logged out/disconnected
     def got_disconnected(self, event):
@@ -268,16 +323,17 @@ class Client(ClientXMPP):
         new_presence = str(presence['from']).split('/')[0]
         if self.boundjid.bare != new_presence and new_presence in self.contact_dict:
             self.contact_dict[new_presence].update_data(
-                '', presence['type'])
+                '', presence['type'], '')
 
     # Act when a contact gets online
     def presence_online(self, presence):
         new_presence = str(presence['from']).split('/')[0]
+        resource = str(presence['from']).split('/')[1]
 
         try:
             if self.boundjid.bare != new_presence and new_presence in self.contact_dict:
                 self.contact_dict[new_presence].update_data(
-                    '', presence['type'])
+                    '', presence['type'], resource)
 
                 # print(
                 # f'{BLUE}{new_presence} got online!{ENDC}')
@@ -499,18 +555,20 @@ class RegisterBot(ClientXMPP):
 
 
 class User():
-    def __init__(self, jid, name, show, status, subscription, username):
+    def __init__(self, jid, name, show, status, subscription, username, resource=None):
         self.jid = jid
         self.name = name
         self.show = show
         self.status = status
         self.subscription = subscription
         self.username = username
+        self.resource = resource
         self.messages = []
 
-    def update_data(self, status, show):
+    def update_data(self, status, show, resource=None):
         self.status = status
         self.show = show
+        self.resource = resource
 
     def get_connection_data(self):
         return [self.username, self.show, self.status, self.subscription]
@@ -523,6 +581,9 @@ class User():
 
     def get_messages(self):
         return self.messages
+      
+    def get_full_jid(self):
+        return f'{self.jid}/{self.resource}'
 
     def get_all_data(self):
         return [self.jid, self.name, self.show, self.status, self.subscription, self.username]
