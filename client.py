@@ -4,14 +4,18 @@ import logging
 import getpass
 import threading
 import base64
+import datetime
+import mimetypes
 from sleekxmpp import ClientXMPP
 from sleekxmpp.exceptions import IqError, IqTimeout
 from xml.etree import cElementTree as ET
 from sleekxmpp.plugins.xep_0004.stanza.field import FormField, FieldOption
 from sleekxmpp.plugins.xep_0004.stanza.form import Form
 from sleekxmpp.plugins.xep_0047.stream import IBBytestream
-from bcolors import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE, RED
+from consts import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE, RED
 
+
+DIRNAME = os.path.dirname(__file__)
 
 class Client(ClientXMPP):
 
@@ -22,6 +26,7 @@ class Client(ClientXMPP):
         self.auto_subscribe = True
         self.contact_dict = {}
         self.user_dict = {}
+        self.file_received = ''
 
         # self.add_event_handler('session_start', self.session_start)
         self.add_event_handler('message', self.received_message)
@@ -48,7 +53,7 @@ class Client(ClientXMPP):
         self.register_plugin('xep_0231')
         self.register_plugin('xep_0045')
         self.register_plugin('xep_0095')  # Offer and accept a file transfer
-        self.register_plugin('xep_0096')  # Offer and accept a file transfer
+        self.register_plugin('xep_0096')  # Request file transfer intermediate
         self.register_plugin('xep_0047')  # Bytestreams
 
         self['xep_0077'].force_registration = True
@@ -146,31 +151,54 @@ class Client(ClientXMPP):
 
             self.contact_dict[jid].add_message_to_list(msg['body'])
 
-    def request_si(self, user_jid):
+    def request_si(self, user_jid, file_path):
 
-        file_path = input('Enter the file path: ')
-        data = open(file_path, 'rb').read()
-        data_encoded = base64.b64encode(data).decode('utf-8')
+        # Get some  data from the file
+        file_name = file_path.split('/')[-1]
+        file_size = os.path.getsize(file_path)        
+        unix_date = os.path.getmtime(file_path)
+        file_date = datetime.datetime.utcfromtimestamp(unix_date).strftime('%Y-%m-%dT%H:%M:%SZ')
+        file_mime_type = 'not defined'
 
+        try:
+            file_mime_type = str(mimetypes.MimeTypes().guess_type(file_path)[0])
+        except:
+            pass
+
+        data = None
+        # Read the contents of the file and encode it to b64
+        with open(file_path, 'rb') as file:
+            data = base64.b64encode(file.read()).decode('utf-8')
+
+        # Set the data of the request
         dest = self.contact_dict[user_jid].get_full_jid()
         req = self.plugin['xep_0096'].request_file_transfer(
             jid=dest,
-            name='test.txt',
-            size=1022,
-            mime_type='text/plain',
-            sid='file1',
-            desc='Este es un texto de prueba',
-            date='2020-09-16 23:34:46.992163',
-            hash='552da749930852c69ae5d2141d3766b1'
+            name=file_name,
+            size=file_size,
+            mime_type=file_mime_type,
+            sid='ibb_file_transfer',
+            desc='Envío un archivo con descripción',
+            date=file_date
         )
 
+        # Wait for the other user to accept the file transfer
         time.sleep(2)
 
+        # Open the ibb stream transfer
         stream = self.plugin['xep_0047'].open_stream(
-            jid=dest, sid='file1', ifrom=self.boundjid.full)
+            jid=dest, sid='ibb_file_transfer', ifrom=self.boundjid.full)
+          
+        # Wait for the other client to get notified about this
+        time.sleep(2)
 
-        stream.sendall(data_encoded)
+        # Send him all of the encoded data
+        stream.sendall(data)
 
+        # Wait for him to process al of it
+        time.sleep(2)
+
+        # Finally, close the ibb stream
         stream.close()
 
     def on_si_request(self, iq):
@@ -207,26 +235,34 @@ class Client(ClientXMPP):
         ''')
         if desc:
             print(f'\t\tDescription: {desc}')
+          
+        # Create empty file
+        dir_path = os.path.join(DIRNAME, 'received_files')
+        self.file_received = file_name
+        with open(os.path.join(dir_path, file_name), 'w') as fp:
+            pass
 
         # Accept the file requested
         self.plugin['xep_0095'].accept(jid=iq.get_from().full, sid=file_id)
 
+    # Let the user know the file is about to start downloading
     def on_stream_start(self, stream):
-        print('About to start streaming the file')
+        print(f'{BLUE}Started streaming and downloading the file...{ENDC}')
 
+    # Append the recieved data to the file
     def stream_data(self, stream):
-        b64_data = stream['data'].encode('utf-8')
-        decoded_data = base64.decodebytes(b64_data)
-        print(decoded_data)
-        # with open('decoded_image.png', 'wb') as file_to_save:
-        #     decoded_image_data = base64.decodebytes(base64_img_bytes)
-        #     file_to_save.write(decoded_image_data)
+        b64_data = stream['data']
+        dir_path = os.path.join(DIRNAME, f'received_files/{self.file_received}')
 
+        with open(dir_path, 'ab+') as new_file:
+            new_file.write(base64.decodebytes(b64_data))
+
+    # Print messages when file transfer finished
     def stream_closed(self, stream):
+        print('{OKGREEN}File transfer completed!{ENDC}')
         print('Stream closed: %s from %s' % (stream.sid, stream.peer_jid))
 
     # Act when logged out/disconnected
-
     def got_disconnected(self, event):
         print(f'{OKBLUE}Logged out from the current session{ENDC}')
 

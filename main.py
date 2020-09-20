@@ -1,19 +1,25 @@
+import os
 import logging
 import time
 from getpass import getpass
 
+import tkinter as tk
+from tkinter import filedialog
 import sleekxmpp
 from prettytable import PrettyTable
 from sleekxmpp.exceptions import IqError, IqTimeout
 
 import client
-from bcolors import *
+from consts import *
 
 close_login = False
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(levelname)-8s %(message)s')
 
+def get_file_path():
+    file_path = filedialog.askopenfilename()
+    return file_path
 
 # Prints a table with every user and its index
 def print_contact_index(user_dict):
@@ -260,8 +266,12 @@ def handle_session(event):
                 # Else, repeat
                 print(invalid_option)
                 continue
-
-            xmpp.request_si(dest)
+                
+            root = tk.Tk()
+            root.mainloop()
+            file_path = get_file_path()
+            
+            xmpp.request_si(dest, file_path)
 
         # OPTION 8: Log out.
         elif option == '8':
@@ -281,6 +291,7 @@ def handle_session(event):
 
 
 if __name__ == "__main__":
+
     while not close_login:
 
         print(login_menu)
@@ -316,10 +327,10 @@ if __name__ == "__main__":
             print(f'\n{BOLD}Login to your account{ENDC}')
             # username = input('Enter your username: ')
             # password = getpass('Enter your password: ')
-            username = 'jua17315@redes2020.xyz'
-            password = 'jua17315'
-            # username = 'testing@redes2020.xyz'
-            # password = 'testing'
+            # username = 'jua17315@redes2020.xyz'
+            # password = 'jua17315'
+            username = 'testing@redes2020.xyz'
+            password = 'testing'
 
             xmpp = client.Client(username, password)
 
