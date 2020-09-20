@@ -27,6 +27,7 @@ class Client(ClientXMPP):
         self.auto_subscribe = True
         self.contact_dict = {}
         self.user_dict = {}
+        self.room_dict = {}
         self.file_received = ''
 
         # self.add_event_handler('session_start', self.session_start)
@@ -38,6 +39,8 @@ class Client(ClientXMPP):
         self.add_event_handler("got_offline", self.presence_offline)
         self.add_event_handler("got_online", self.presence_online)
         self.add_event_handler('changed_status', self.wait_for_presences)
+        self.add_event_handler('groupchat_presence',
+                               self.on_groupchat_presence)
 
         # FILE TRANSFER
         self.add_event_handler('si_request', self.on_si_request)
@@ -151,6 +154,15 @@ class Client(ClientXMPP):
                     jid, '', '', '', '', username)
 
             self.contact_dict[jid].add_message_to_list(msg['body'])
+
+        elif msg['type'] in ('groupchat', 'normal'):
+            nick = sender.split('/')[1]
+
+            # TODO: dont let you get a not from yourself
+            print(f'New message from {nick} in {jid}')
+
+            if jid in self.room_dict:
+                self.room_dict[jid].add_message_to_list((nick, msg['body']))
 
     def request_si(self, user_jid, file_path):
 
@@ -362,10 +374,10 @@ class Client(ClientXMPP):
 
     # Act when a new presence subscribes to you
     def new_presence_subscribed(self, presence):
-        print('PRESENCE SUBSCRIBED!')
-        print(presence)
+        print(f'{BLUE}{presence.get_from()} Subscribed to you!{ENDC}')
 
     # Delete account from server
+
     def delete_account(self):
         resp = self.Iq()
         resp['type'] = 'set'
@@ -424,19 +436,25 @@ class Client(ClientXMPP):
 
     # Join an existing room
     def join_room(self, room, nick):
+        status = 'Hello world!'
         self.plugin['xep_0045'].joinMUC(
             room,
             nick,
-            pstatus='Hello world!',
+            pstatus=status,
             pfrom=self.boundjid.full,
             wait=True)
 
+        if not room in self.room_dict:
+            self.room_dict[room] = Group(room, nick, status)
+
     # Create a new room with its name and nick
+
     def create_new_room(self, room, nick):
+        status = 'Hello world!'
         self.plugin['xep_0045'].joinMUC(
             room,
             nick,
-            pstatus='Hello world!',
+            pstatus=status,
             pfrom=self.boundjid.full,
             wait=True)
 
@@ -445,21 +463,48 @@ class Client(ClientXMPP):
 
         self.plugin['xep_0045'].configureRoom(room, ifrom=self.boundjid.full)
 
+        self.room_dict[room] = Group(room, nick, status)
+
     # Leave a room
     def leave_room(self, room, nick):
         self.plugin['xep_0045'].leaveMUC(room, nick)
 
+        if room in self.room_dict:
+            del self.room_dict[room]
+        else:
+            print(f'{FAIL} You are not part of that room!{ENDC}')
+
     # Send a message to a room
-    def send_groupchat_message(self, to, message):
+    def send_groupchat_message(self, room, message):
         try:
             self.send_message(
-                mto=to,
+                mto=room,
                 mbody=message,
                 mtype='groupchat',
                 mfrom=self.boundjid.full
             )
+            if room in self.room_dict:
+                self.room_dict[room].clean_unread_messages()
             return True
         except:
+            return False
+
+    def on_groupchat_presence(self, presence):
+        values = presence.values
+        presence_from = presence.get_from()
+
+        if presence_from.resource != self.room_dict[presence_from.bare].nick:
+            user_type = values['type']
+            nick = values['muc']['nick']
+            room = values['muc']['room']
+            print(f'{nick} is {user_type} in {room}')
+
+    # Get the room dictionary
+
+    def get_group_dict(self):
+        if self.room_dict:
+            return self.room_dict
+        else:
             return False
 
     # Get all online users
@@ -643,7 +688,7 @@ class User():
         self.messages.append(msg)
 
     def clean_unread_messages(self):
-        self.messages = []
+        self.messages.clear()
 
     def get_messages(self):
         return self.messages
@@ -653,3 +698,23 @@ class User():
 
     def get_all_data(self):
         return [self.jid, self.name, self.show, self.status, self.subscription, self.username]
+
+
+class Group():
+    def __init__(self, room, nick, status=None):
+        self.room = room
+        self.nick = nick
+        self.status = status
+        self.messages = []
+
+    def clean_unread_messages(self):
+        self.messages.clear()
+
+    def get_data(self):
+        return [self.room, self.nick]
+
+    def get_messages(self):
+        return self.messages
+
+    def add_message_to_list(self, msg):
+        self.messages.append(msg)

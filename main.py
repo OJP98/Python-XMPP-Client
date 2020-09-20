@@ -21,7 +21,25 @@ def get_file_path():
     return file_path
 
 
+def print_groups(group_dict):
+    table = PrettyTable()
+    table.field_names = [f'{BOLD}No.{ENDC}',
+                         f'{BOLD}ROOM{ENDC}',
+                         f'{BOLD}NICK{ENDC}']
+
+    table.align = 'l'
+    counter = 1
+    for url, group in group_dict.items():
+        group_info = group.get_data()
+        table.add_row([counter, group_info[0], group_info[1]])
+        counter += 1
+
+    print(table)
+
+
 # Prints a table with every user and its index
+
+
 def print_contact_index(user_dict):
     table = PrettyTable(border=False)
     table.field_names = [f'{BOLD}No. {ENDC}',
@@ -192,6 +210,7 @@ def handle_session(event):
             # 2. Join a group
             elif group_option == '2':
                 print(f'\n{BOLD}Join a group chat{ENDC}')
+
                 room = input('Room URL: ')
                 nick = input('Nick: ')
 
@@ -204,14 +223,44 @@ def handle_session(event):
 
             # 3. Send message to a group
             elif group_option == '3':
-                print(f'\n{BOLD}Send message to room{ENDC}')
-                room = input('Room URL: ')
-                message = input('Message: ')
 
-                if xmpp.send_groupchat_message(room, message):
-                    print(f'{OKGREEN}Message sent!{ENDC}')
+                print(f'\n{BOLD}Send a message to a group{ENDC}')
+                room_dict = xmpp.get_group_dict()
+
+                if room_dict:
+                    # Print table of groups with their index
+                    print_groups(room_dict)
+                    recipient = input('\nEnter recipient index or jid: ')
+
+                    if '@' in recipient:
+                        dest = recipient
+                    else:
+                        try:
+                            recipient = int(recipient)
+                            # Check if user index was correct
+                            dest = list(room_dict.keys())[recipient-1]
+                        except ValueError:
+                            # Else, repeat
+                            print(invalid_option)
+                            continue
+
+                    received_messages = room_dict[dest].get_messages()
+                    if received_messages:
+                        print(
+                            f'\nThe unread message(s) from {dest} are:')
+                        for msg in received_messages:
+                            print(f'\t--> {msg}')
+
+                    new_message = input('Enter a message: ')
+
+                    if new_message:
+                        if xmpp.send_groupchat_message(dest, new_message):
+                            print(f'{OKGREEN}Message sent!{ENDC}')
+                        else:
+                            print(error_msg)
+
                 else:
-                    print(error_msg)
+                    print(f'{FAIL}You havent joined any room yet.{ENDC}')
 
             # 4. Leave group
             elif group_option == '4':
