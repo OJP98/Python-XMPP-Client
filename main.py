@@ -11,12 +11,15 @@ from consts import *
 
 close_login = False
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(levelname)-8s %(message)s')
+# logging.basicConfig(level=logging.DEBUG,
+#                     format='%(levelname)-8s %(message)s')
 
+
+# With tkinter, opens a windows for the user to select a file.
 def get_file_path():
     file_path = filedialog.askopenfilename()
     return file_path
+
 
 # Prints a table with every user and its index
 def print_contact_index(user_dict):
@@ -35,6 +38,7 @@ def print_contact_index(user_dict):
     print(table)
 
 
+# Prints all users through a table
 def print_all_users(user_dict):
     table = PrettyTable()
     table.field_names = [f'{BOLD}USERNAME{ENDC}',
@@ -48,8 +52,8 @@ def print_all_users(user_dict):
     print(table)
 
 
+# Prints a table with every contact and its connection data
 def print_contacts(user_dict):
-    # Prints a table with every user and its connection data
     table = PrettyTable()
     table.field_names = [f'{BOLD}USER{ENDC}',
                          f'{BOLD}SHOW{ENDC}',
@@ -66,8 +70,8 @@ def print_contacts(user_dict):
     print(table)
 
 
+# Prints a table with every user and its connection data
 def print_user_data(users, amount):
-    # Prints a table with every user and its connection data
     table = PrettyTable(border=False)
     table.field_names = [f'{BOLD}EMAIL{ENDC}',
                          f'{BOLD}JID{ENDC}',
@@ -113,7 +117,11 @@ def handle_session(event):
         elif option == '2':
             print(f'\n{BOLD}Add user to contact list{ENDC}')
             user_jid = input('Enter user jid: ')
-            xmpp.add_user(user_jid)
+
+            if user_jid and '@' in user_jid:
+                xmpp.add_user(user_jid)
+            else:
+                print(invalid_option)
 
         # OPTION 3: Get user details
         elif option == '3':
@@ -263,7 +271,7 @@ def handle_session(event):
                 # Else, repeat
                 print(invalid_option)
                 continue
-                
+
             try:
                 import tkinter as tk
                 from tkinter import filedialog
@@ -271,14 +279,14 @@ def handle_session(event):
                 root.mainloop()
                 file_path = get_file_path()
             except:
-                file_path = input('Enter the path of the file you want to send: ')
+                file_path = str(input(
+                    'Enter the path of the file you want to send: '))
 
             if file_path:
                 xmpp.request_si(dest, file_path)
             else:
                 print(invalid_option)
                 continue
-
 
         # OPTION 8: Log out.
         elif option == '8':
@@ -331,7 +339,7 @@ if __name__ == "__main__":
 
         # Login with credentials
         elif option == '2':
-            print(f'\n{BOLD}Login to your account{ENDC}')
+            print(f'\n{BOLD}Logging in to your account{ENDC}')
             # username = input('Enter your username: ')
             # password = getpass('Enter your password: ')
             # username = 'jua17315@redes2020.xyz'

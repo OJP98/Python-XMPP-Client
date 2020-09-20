@@ -17,6 +17,7 @@ from consts import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE, RED
 
 DIRNAME = os.path.dirname(__file__)
 
+
 class Client(ClientXMPP):
 
     def __init__(self, jid, password):
@@ -153,15 +154,18 @@ class Client(ClientXMPP):
 
     def request_si(self, user_jid, file_path):
 
+        file_path = file_path.replace('\\', '/')
         # Get some  data from the file
         file_name = file_path.split('/')[-1]
-        file_size = os.path.getsize(file_path)        
+        file_size = os.path.getsize(file_path)
         unix_date = os.path.getmtime(file_path)
-        file_date = datetime.datetime.utcfromtimestamp(unix_date).strftime('%Y-%m-%dT%H:%M:%SZ')
+        file_date = datetime.datetime.utcfromtimestamp(
+            unix_date).strftime('%Y-%m-%dT%H:%M:%SZ')
         file_mime_type = 'not defined'
 
         try:
-            file_mime_type = str(mimetypes.MimeTypes().guess_type(file_path)[0])
+            file_mime_type = str(
+                mimetypes.MimeTypes().guess_type(file_path)[0])
         except:
             pass
 
@@ -189,7 +193,7 @@ class Client(ClientXMPP):
         # Open the ibb stream transfer
         stream = self.plugin['xep_0047'].open_stream(
             jid=dest, sid='ibb_file_transfer', ifrom=self.boundjid.full)
-          
+
         # Wait for the other client to get notified about this
         time.sleep(2)
 
@@ -236,7 +240,7 @@ class Client(ClientXMPP):
         ''')
         if desc:
             print(f'\t\tDescription: {desc}')
-          
+
         # Create empty file
         dir_path = os.path.join(DIRNAME, 'received_files')
         self.file_received = file_name
@@ -248,19 +252,20 @@ class Client(ClientXMPP):
 
     # Let the user know the file is about to start downloading
     def on_stream_start(self, stream):
-        print(f'{BLUE}Started streaming and downloading the file...{ENDC}')
+        print(f'{BLUE}Stream started... File transfer initiated.{ENDC}')
 
     # Append the recieved data to the file
     def stream_data(self, stream):
         b64_data = stream['data']
-        dir_path = os.path.join(DIRNAME, f'received_files/{self.file_received}')
+        dir_path = os.path.join(
+            DIRNAME, f'received_files/{self.file_received}')
 
         with open(dir_path, 'ab+') as new_file:
             new_file.write(base64.decodebytes(b64_data))
 
     # Print messages when file transfer finished
     def stream_closed(self, stream):
-        print('{OKGREEN}File transfer completed!{ENDC}')
+        print(f'{OKGREEN}File transfer completed!{ENDC}')
         print('Stream closed: %s from %s' % (stream.sid, stream.peer_jid))
 
     # Act when logged out/disconnected
@@ -280,8 +285,9 @@ class Client(ClientXMPP):
 
         if not jid in self.contact_dict:
             self.contact_dict[jid] = User(
-                jid, '', '', '', '', str(jid.split('@')[0]))
+                jid, '', '', '', 'none', str(jid.split('@')[0]))
         print(f'{OKBLUE}Subscribed to {jid}!{ENDC}')
+        self.create_user_dict()
 
     # Search for a user by his username
     def get_user_data(self, username):
@@ -413,7 +419,8 @@ class Client(ClientXMPP):
         if recipient in self.contact_dict:
             self.contact_dict[recipient].clean_unread_messages()
 
-        print(f'{OKGREEN} Message sent!{ENDC}')
+        if message:
+            print(f'{OKGREEN} Message sent!{ENDC}')
 
     # Join an existing room
     def join_room(self, room, nick):
