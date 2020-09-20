@@ -183,6 +183,7 @@ class Client(ClientXMPP):
         )
 
         # Wait for the other user to accept the file transfer
+        print(f'{BLUE}Offering a file transfer to the user.{ENDC}')
         time.sleep(2)
 
         # Open the ibb stream transfer

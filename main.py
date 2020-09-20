@@ -1,11 +1,8 @@
 import os
 import logging
 import time
-from getpass import getpass
-
-import tkinter as tk
-from tkinter import filedialog
 import sleekxmpp
+from getpass import getpass
 from prettytable import PrettyTable
 from sleekxmpp.exceptions import IqError, IqTimeout
 
@@ -267,11 +264,21 @@ def handle_session(event):
                 print(invalid_option)
                 continue
                 
-            root = tk.Tk()
-            root.mainloop()
-            file_path = get_file_path()
-            
-            xmpp.request_si(dest, file_path)
+            try:
+                import tkinter as tk
+                from tkinter import filedialog
+                root = tk.Tk()
+                root.mainloop()
+                file_path = get_file_path()
+            except:
+                file_path = input('Enter the path of the file you want to send: ')
+
+            if file_path:
+                xmpp.request_si(dest, file_path)
+            else:
+                print(invalid_option)
+                continue
+
 
         # OPTION 8: Log out.
         elif option == '8':
