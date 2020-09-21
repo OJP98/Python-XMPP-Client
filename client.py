@@ -86,43 +86,41 @@ class Client(ClientXMPP):
             print('Error: Request timed out')
 
         groups = self.client_roster.groups()
-        for group in groups:
-            for jid in groups[group]:
-                # Check we are not evaluating ourselves
-                if jid == self.boundjid.bare:
-                    continue
+        for jid in groups['']:
+            # Check we are not evaluating ourselves or a conference room
+            if jid == self.boundjid.bare or 'conference' in jid:
+                continue
 
-                # Get some data
-                sub = self.client_roster[jid]['subscription']
-                name = self.client_roster[jid]['name']
-                username = str(jid.split('@')[0])
-                connections = self.client_roster.presence(jid)
+            # Get some data
+            sub = self.client_roster[jid]['subscription']
+            name = self.client_roster[jid]['name']
+            username = str(jid.split('@')[0])
+            connections = self.client_roster.presence(jid)
 
-                # Check if connections is empty
-                if connections.items():
-                    # Go through each connection
-                    for res, pres in connections.items():
+            # Check if connections is empty
+            if connections.items():
+                # Go through each connection
+                for res, pres in connections.items():
 
-                        show = 'available'
-                        status = ''
-                        if pres['show']:
-                            show = pres['show']
-                        if pres['status']:
-                            status = pres['status']
+                    show = 'available'
+                    status = ''
+                    if pres['show']:
+                        show = pres['show']
+                    if pres['status']:
+                        status = pres['status']
 
-                        # Check if the user is in the dict, else add it
-                        if not jid in self.contact_dict:
-                            self.contact_dict[jid] = User(
-                                jid, name, show, status, sub, username, res)
-                        else:
-                            self.contact_dict[jid].update_data(
-                                status, show, res)
-
-                # User is not connected, still add him to the dict
-                else:
+                    # Check if the user is in the dict, else add it
                     if not jid in self.contact_dict:
                         self.contact_dict[jid] = User(
-                            jid, name, 'unavailable', '', sub, username, '')
+                            jid, name, show, status, sub, username, res)
+                    else:
+                        self.contact_dict[jid].update_data(
+                            status, show, res, sub)
+
+            # User is not connected, still add him to the dict
+            else:
+                self.contact_dict[jid] = User(
+                    jid, name, 'unavailable', '', sub, username, '')
 
     # Returns a dict jid - User. If it's empty, create it.
     def get_user_dict(self):
@@ -153,16 +151,16 @@ class Client(ClientXMPP):
                 self.contact_dict[jid] = User(
                     jid, '', '', '', '', username)
 
-            self.contact_dict[jid].add_message_to_list(msg['body'])
+            self.contact_dict[jid].add_message_to_list((username, msg['body']))
 
         elif msg['type'] in ('groupchat', 'normal'):
             nick = sender.split('/')[1]
 
-            # TODO: dont let you get a not from yourself
-            print(f'New message from {nick} in {jid}')
-
+            # don't let you get a notification from yourself
             if jid in self.room_dict:
                 self.room_dict[jid].add_message_to_list((nick, msg['body']))
+                if nick != self.room_dict[jid].nick:
+                    print(f'{BLUE}New message from {nick} in {jid}{ENDC}')
 
     def request_si(self, user_jid, file_path):
 
@@ -297,8 +295,10 @@ class Client(ClientXMPP):
 
         if not jid in self.contact_dict:
             self.contact_dict[jid] = User(
-                jid, '', '', '', 'none', str(jid.split('@')[0]))
+                jid, '', '', '', 'to', str(jid.split('@')[0]))
         print(f'{OKBLUE}Subscribed to {jid}!{ENDC}')
+        self.get_roster()
+        time.sleep(2)
         self.create_user_dict()
 
     # Search for a user by his username
@@ -374,10 +374,10 @@ class Client(ClientXMPP):
 
     # Act when a new presence subscribes to you
     def new_presence_subscribed(self, presence):
-        print(f'{BLUE}{presence.get_from()} Subscribed to you!{ENDC}')
+        print(f'{BLUE}{presence.get_from()} subscribed to you!{ENDC}')
+
 
     # Delete account from server
-
     def delete_account(self):
         resp = self.Iq()
         resp['type'] = 'set'
@@ -428,8 +428,8 @@ class Client(ClientXMPP):
             mbody=message,
             mtype='chat',
             mfrom=self.boundjid.bare)
-        if recipient in self.contact_dict:
-            self.contact_dict[recipient].clean_unread_messages()
+        # if recipient in self.contact_dict:
+            # self.contact_dict[recipient].clean_unread_messages()
 
         if message:
             print(f'{OKGREEN} Message sent!{ENDC}')
@@ -447,8 +447,8 @@ class Client(ClientXMPP):
         if not room in self.room_dict:
             self.room_dict[room] = Group(room, nick, status)
 
-    # Create a new room with its name and nick
 
+    # Create a new room with its name and nick
     def create_new_room(self, room, nick):
         status = 'Hello world!'
         self.plugin['xep_0045'].joinMUC(
@@ -483,8 +483,8 @@ class Client(ClientXMPP):
                 mtype='groupchat',
                 mfrom=self.boundjid.full
             )
-            if room in self.room_dict:
-                self.room_dict[room].clean_unread_messages()
+            # if room in self.room_dict:
+                # self.room_dict[room].clean_unread_messages()
             return True
         except:
             return False
@@ -493,11 +493,13 @@ class Client(ClientXMPP):
         values = presence.values
         presence_from = presence.get_from()
 
+        print(presence)
+
         if presence_from.resource != self.room_dict[presence_from.bare].nick:
             user_type = values['type']
             nick = values['muc']['nick']
             room = values['muc']['room']
-            print(f'{nick} is {user_type} in {room}')
+            print(f'{BLUE}{nick} is {user_type} in {room}{ENDC}')
 
     # Get the room dictionary
 
@@ -676,10 +678,12 @@ class User():
         self.resource = resource
         self.messages = []
 
-    def update_data(self, status, show, resource=None):
+    def update_data(self, status, show, resource=None, subscription=None):
         self.status = status
         self.show = show
         self.resource = resource
+        if subscription:
+            self.subscription = subscription
 
     def get_connection_data(self):
         return [self.username, self.show, self.status, self.subscription]

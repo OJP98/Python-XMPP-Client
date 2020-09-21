@@ -21,6 +21,7 @@ def get_file_path():
     return file_path
 
 
+# Prints a table with all of the groups the user is part of
 def print_groups(group_dict):
     table = PrettyTable()
     table.field_names = [f'{BOLD}No.{ENDC}',
@@ -38,8 +39,6 @@ def print_groups(group_dict):
 
 
 # Prints a table with every user and its index
-
-
 def print_contact_index(user_dict):
     table = PrettyTable(border=False)
     table.field_names = [f'{BOLD}No. {ENDC}',
@@ -180,9 +179,9 @@ def handle_session(event):
             received_messages = roster[dest].get_messages()
             if received_messages:
                 print(
-                    f'\nThe unread message(s) from {dest} are:')
-                for msg in received_messages:
-                    print(f'\t--> {msg}')
+                    f'\nThe message(s) with {dest} are:')
+                for sender, msg in received_messages:
+                    print(f'\t{sender} --> {msg}')
 
             new_message = input('Enter a message: ')
             xmpp.send_session_message(dest, new_message)
@@ -248,8 +247,8 @@ def handle_session(event):
                     if received_messages:
                         print(
                             f'\nThe unread message(s) from {dest} are:')
-                        for msg in received_messages:
-                            print(f'\t--> {msg}')
+                        for sender, msg in received_messages:
+                            print(f'\t{sender} --> {msg}')
 
                     new_message = input('Enter a message: ')
 
@@ -391,10 +390,10 @@ if __name__ == "__main__":
             print(f'\n{BOLD}Logging in to your account{ENDC}')
             # username = input('Enter your username: ')
             # password = getpass('Enter your password: ')
-            # username = 'jua17315@redes2020.xyz'
-            # password = 'jua17315'
-            username = 'testing@redes2020.xyz'
-            password = 'testing'
+            username = 'jua17315@redes2020.xyz'
+            password = 'jua17315'
+            # username = 'testing@redes2020.xyz'
+            # password = 'testing'
 
             xmpp = client.Client(username, password)
 
