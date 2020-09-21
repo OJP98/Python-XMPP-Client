@@ -145,7 +145,7 @@ class Client(ClientXMPP):
         jid = sender.split('/')[0]
         username = jid.split('@')[0]
         if msg['type'] in ('chat', 'normal'):
-            print(f'New message from {jid}')
+            print(f'{BLUE}New message from {jid}{ENDC}')
 
             if not jid in self.contact_dict:
                 self.contact_dict[jid] = User(
@@ -423,13 +423,14 @@ class Client(ClientXMPP):
 
     # Send a message to someone directly
     def send_session_message(self, recipient, message):
+        mfrom = self.boundjid.bare
         self.send_message(
             mto=recipient,
             mbody=message,
             mtype='chat',
             mfrom=self.boundjid.bare)
-        # if recipient in self.contact_dict:
-            # self.contact_dict[recipient].clean_unread_messages()
+        if recipient in self.contact_dict:
+            self.contact_dict[recipient].add_message_to_list((mfrom.split('@')[0], message))
 
         if message:
             print(f'{OKGREEN} Message sent!{ENDC}')
@@ -483,8 +484,7 @@ class Client(ClientXMPP):
                 mtype='groupchat',
                 mfrom=self.boundjid.full
             )
-            # if room in self.room_dict:
-                # self.room_dict[room].clean_unread_messages()
+                
             return True
         except:
             return False
