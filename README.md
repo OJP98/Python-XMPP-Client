@@ -7,7 +7,7 @@ XMPP chat client application made with python and SleekXMPP.
 
 ## Installation guide
 
-**Optional:** It's better if you try this in a python virtual enviroment
+**Optional:** It's better if you try this in a python virtual enviroment.
 
 1. Clone this repo with the following url `https://github.com/OJP98/Python-XMPP-Client`
 2. With you favorite terminal, install the dependencies with the command `pip install -r requirements.txt`
@@ -34,7 +34,8 @@ This client provides basic features like sending messages, receiving messages an
 
 ## Useful notes
 
-* In order to read any message that a user sent you, first you must "send a private message" and then select the desired user. This will show you a list containing all the messages that you haven't read yet (if any). You may then skip sending a message to the user by just pressing enter, without entering any text on the input.
+* In order to read any message that a user sent you, first you must "send a private message" or "send a message to a group" and then select the desired user/room. This will show you a list containing all the messages managed throughout the session (if any). You may then skip sending a message back by just pressing enter, without entering any text on the input. That's why it's recommended to set up a virtual enviroment.
+* Installing the versions specified in **requirements.txt** is **HIGHLY RECOMMENDED** due to some bugs that SleekXMPP latest version contains.
 * This project **DOES NOT** handle all of the errors from the server. Actually, some features might not work as desired with other created clients.
 
 ## Developer
