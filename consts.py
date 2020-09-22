@@ -5,9 +5,10 @@ WARNING = '\033[93m' + 'WARNING: '
 FAIL = '\033[91m' + 'FAIL: '
 ENDC = '\033[0m'
 BOLD = '\033[1m'
-UNDERLINE = '\033[4m'
+UNDERLINE = '\033[1;30m'
 BLUE = '\033[94m'
 RED = '\033[91m'
+YELLOW = '\033[93m'
 
 # Menu messages
 login_menu = f"""
@@ -65,3 +66,24 @@ Type {BOLD}exit{ENDC} to leave this chat session.
 
 # Userful variables
 show_array = ['chat', 'away', 'xa', 'dnd']
+
+# NOTIFICATIONS:
+NEW_MESSAGE = '''
+|==============> NEW MESSAGE <==============|
+'''
+
+FILE_OFFER = '''
+<==============| OFFERED FILE |==============>
+'''
+
+SUSCRIPTION = '''
+|==============| SUSCRIPTION |==============|
+'''
+
+GOT_ONLINE = '''
+|==============> NOW ONLINE <==============|
+'''
+
+GROUPCHAT = '''
+|==============> NOW ONLINE <==============|
+'''

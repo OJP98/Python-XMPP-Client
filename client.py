@@ -12,7 +12,7 @@ from xml.etree import cElementTree as ET
 from sleekxmpp.plugins.xep_0004.stanza.field import FormField, FieldOption
 from sleekxmpp.plugins.xep_0004.stanza.form import Form
 from sleekxmpp.plugins.xep_0047.stream import IBBytestream
-from consts import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE, RED
+from consts import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE, RED, NEW_MESSAGE, FILE_OFFER, SUSCRIPTION, GOT_ONLINE, error_msg, GROUPCHAT
 
 
 DIRNAME = os.path.dirname(__file__)
@@ -145,7 +145,7 @@ class Client(ClientXMPP):
         jid = sender.split('/')[0]
         username = jid.split('@')[0]
         if msg['type'] in ('chat', 'normal'):
-            print(f'{BLUE}New message from {jid}{ENDC}')
+            print(f'{BLUE}{NEW_MESSAGE} New message from {jid}{ENDC}')
 
             if not jid in self.contact_dict:
                 self.contact_dict[jid] = User(
@@ -160,7 +160,8 @@ class Client(ClientXMPP):
             if jid in self.room_dict:
                 self.room_dict[jid].add_message_to_list((nick, msg['body']))
                 if nick != self.room_dict[jid].nick:
-                    print(f'{BLUE}New message from {nick} in {jid}{ENDC}')
+                    print(
+                        f'{BLUE}{GROUPCHAT} New message from {nick} in {jid}{ENDC}')
 
     def request_si(self, user_jid, file_path):
 
@@ -186,35 +187,41 @@ class Client(ClientXMPP):
 
         # Set the data of the request
         dest = self.contact_dict[user_jid].get_full_jid()
-        req = self.plugin['xep_0096'].request_file_transfer(
-            jid=dest,
-            name=file_name,
-            size=file_size,
-            mime_type=file_mime_type,
-            sid='ibb_file_transfer',
-            desc='Envío un archivo con descripción',
-            date=file_date
-        )
 
-        # Wait for the other user to accept the file transfer
-        print(f'{BLUE}Offering a file transfer to the user.{ENDC}')
-        time.sleep(2)
+        try:
 
-        # Open the ibb stream transfer
-        stream = self.plugin['xep_0047'].open_stream(
-            jid=dest, sid='ibb_file_transfer', ifrom=self.boundjid.full)
+            req = self.plugin['xep_0096'].request_file_transfer(
+                jid=dest,
+                name=file_name,
+                size=file_size,
+                mime_type=file_mime_type,
+                sid='ibb_file_transfer',
+                desc='Envío un archivo con descripción',
+                date=file_date
+            )
 
-        # Wait for the other client to get notified about this
-        time.sleep(2)
+            # Wait for the other user to accept the file transfer
+            print(f'{BLUE}{FILE_OFFER} Offering a file transfer to the user.{ENDC}')
+            time.sleep(2)
 
-        # Send him all of the encoded data
-        stream.sendall(data)
+            # Open the ibb stream transfer
+            stream = self.plugin['xep_0047'].open_stream(
+                jid=dest, sid='ibb_file_transfer', ifrom=self.boundjid.full)
 
-        # Wait for him to process al of it
-        time.sleep(2)
+            # Wait for the other client to get notified about this
+            time.sleep(2)
 
-        # Finally, close the ibb stream
-        stream.close()
+            # Send him all of the encoded data
+            stream.sendall(data)
+
+            # Wait for him to process al of it
+            time.sleep(2)
+
+            # Finally, close the ibb stream
+            stream.close()
+
+        except:
+            print(error_msg)
 
     def on_si_request(self, iq):
 
@@ -240,7 +247,7 @@ class Client(ClientXMPP):
         except:
             desc = None
 
-        print(f'{RED}================| FILE REQUEST RECEIVED |================{ENDC}')
+        print(f'{RED}|================> FILE REQUEST RECEIVED <===============|{ENDC}')
         print(f'''
         {RED}{sender} is going to send you a file: {ENDC}
             - type: {file_type}
@@ -249,7 +256,7 @@ class Client(ClientXMPP):
             - date: {file_date}
         ''')
         if desc:
-            print(f'\t\tDescription: {desc}')
+            print(f'  Description: {desc}')
 
         # Create empty file
         dir_path = os.path.join(DIRNAME, 'received_files')
@@ -262,7 +269,10 @@ class Client(ClientXMPP):
 
     # Let the user know the file is about to start downloading
     def on_stream_start(self, stream):
-        print(f'{BLUE}Stream started... File transfer initiated.{ENDC}')
+        print(f'''
+        {BLUE}|================> STREAM STARTED <================|
+                            File transfer initiated.{ENDC}
+        ''')
 
     # Append the recieved data to the file
     def stream_data(self, stream):
@@ -296,7 +306,7 @@ class Client(ClientXMPP):
         if not jid in self.contact_dict:
             self.contact_dict[jid] = User(
                 jid, '', '', '', 'to', str(jid.split('@')[0]))
-        print(f'{OKBLUE}Subscribed to {jid}!{ENDC}')
+        print(f'{OKBLUE}{SUSCRIPTION} Subscribed to {jid}!{ENDC}')
         self.get_roster()
         time.sleep(2)
         self.create_user_dict()
@@ -374,10 +384,10 @@ class Client(ClientXMPP):
 
     # Act when a new presence subscribes to you
     def new_presence_subscribed(self, presence):
-        print(f'{BLUE}{presence.get_from()} subscribed to you!{ENDC}')
-
+        print(f'{BLUE}{SUSCRIPTION} {presence.get_from()} subscribed to you!{ENDC}')
 
     # Delete account from server
+
     def delete_account(self):
         resp = self.Iq()
         resp['type'] = 'set'
@@ -412,8 +422,8 @@ class Client(ClientXMPP):
                 self.contact_dict[new_presence].update_data(
                     '', presence['type'], resource)
 
-                # print(
-                # f'{BLUE}{new_presence} got online!{ENDC}')
+                print(
+                    f'{BLUE}{GOT_ONLINE} {new_presence} got online!{ENDC}')
         except:
             pass
 
@@ -429,8 +439,9 @@ class Client(ClientXMPP):
             mbody=message,
             mtype='chat',
             mfrom=self.boundjid.bare)
-        if recipient in self.contact_dict:
-            self.contact_dict[recipient].add_message_to_list((mfrom.split('@')[0], message))
+        if recipient in self.contact_dict and message:
+            self.contact_dict[recipient].add_message_to_list(
+                (mfrom.split('@')[0], message))
 
         if message:
             print(f'{OKGREEN} Message sent!{ENDC}')
@@ -448,8 +459,8 @@ class Client(ClientXMPP):
         if not room in self.room_dict:
             self.room_dict[room] = Group(room, nick, status)
 
-
     # Create a new room with its name and nick
+
     def create_new_room(self, room, nick):
         status = 'Hello world!'
         self.plugin['xep_0045'].joinMUC(
@@ -484,7 +495,7 @@ class Client(ClientXMPP):
                 mtype='groupchat',
                 mfrom=self.boundjid.full
             )
-                
+
             return True
         except:
             return False
@@ -493,13 +504,11 @@ class Client(ClientXMPP):
         values = presence.values
         presence_from = presence.get_from()
 
-        print(presence)
-
         if presence_from.resource != self.room_dict[presence_from.bare].nick:
             user_type = values['type']
             nick = values['muc']['nick']
             room = values['muc']['room']
-            print(f'{BLUE}{nick} is {user_type} in {room}{ENDC}')
+            print(f'{BLUE}{GROUPCHAT}{nick} is {user_type} in {room}{ENDC}')
 
     # Get the room dictionary
 

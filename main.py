@@ -40,7 +40,7 @@ def print_groups(group_dict):
 
 # Prints a table with every user and its index
 def print_contact_index(user_dict):
-    table = PrettyTable(border=False)
+    table = PrettyTable()
     table.field_names = [f'{BOLD}No. {ENDC}',
                          f'{BOLD}USERNAME{ENDC}',
                          f'{BOLD}SHOW{ENDC}',
@@ -153,6 +153,7 @@ def handle_session(event):
 
         # OPTION 4: Private session
         elif option == '4':
+            print(f'\n{BOLD}Send a private message{ENDC}\n')
             # Get updated roster
             roster = xmpp.get_user_dict()
 
@@ -181,7 +182,7 @@ def handle_session(event):
                 print(
                     f'\nThe message(s) with {dest} are:')
                 for sender, msg in received_messages:
-                    print(f'\t{sender} --> {msg}')
+                    print(f'\t{sender}:  {msg}')
 
             new_message = input('Enter a message: ')
             xmpp.send_session_message(dest, new_message)
@@ -267,8 +268,12 @@ def handle_session(event):
                 room = input('Room URL: ')
                 nick = input('Nick: ')
 
-                xmpp.leave_room(room, nick)
-                print(f'{OKGREEN}You left the group.{ENDC}')
+                if room and nick:
+                    xmpp.leave_room(room, nick)
+                    print(f'{OKGREEN}You left the group.{ENDC}')
+                else:
+                    print(f'{FAIL}You must provide a nick and a room!{ENDC}')
+                    continue
 
             # 5. Cancel
             elif group_option == '5':
@@ -387,13 +392,13 @@ if __name__ == "__main__":
 
         # Login with credentials
         elif option == '2':
-            print(f'\n{BOLD}Logging in to your account{ENDC}')
-            # username = input('Enter your username: ')
-            # password = getpass('Enter your password: ')
-            username = 'jua17315@redes2020.xyz'
-            password = 'jua17315'
-            # username = 'testing@redes2020.xyz'
-            # password = 'testing'
+            print(f'\n{BOLD}Login in to your account{ENDC}')
+            username = input('Enter your username: ')
+            password = getpass('Enter your password: ')
+
+            if not username or not password:
+                print(f'{FAIL} please enter a username and a password!{ENDC}')
+                continue
 
             xmpp = client.Client(username, password)
 
