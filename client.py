@@ -12,7 +12,7 @@ from xml.etree import cElementTree as ET
 from sleekxmpp.plugins.xep_0004.stanza.field import FormField, FieldOption
 from sleekxmpp.plugins.xep_0004.stanza.form import Form
 from sleekxmpp.plugins.xep_0047.stream import IBBytestream
-from consts import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE, RED, NEW_MESSAGE, FILE_OFFER, SUSCRIPTION, GOT_ONLINE, error_msg, GROUPCHAT
+from consts import OKGREEN, OKBLUE, WARNING, FAIL, ENDC, BLUE, RED, NEW_MESSAGE, FILE_OFFER, SUSCRIPTION, GOT_ONLINE, error_msg, GROUPCHAT, STREAM_TRANSFER
 
 
 DIRNAME = os.path.dirname(__file__)
@@ -247,9 +247,9 @@ class Client(ClientXMPP):
         except:
             desc = None
 
-        print(f'{RED}|================> FILE REQUEST RECEIVED <===============|{ENDC}')
+        print(f'{BLUE}|================> FILE REQUEST RECEIVED <===============|{ENDC}')
         print(f'''
-        {RED}{sender} is going to send you a file: {ENDC}
+        {BLUE}{sender} is going to send you a file: {ENDC}
             - type: {file_type}
             - name: {file_name}
             - size: {file_size}
@@ -269,10 +269,7 @@ class Client(ClientXMPP):
 
     # Let the user know the file is about to start downloading
     def on_stream_start(self, stream):
-        print(f'''
-        {BLUE}|================> STREAM STARTED <================|
-                            File transfer initiated.{ENDC}
-        ''')
+        print(f'{RED}{STREAM_TRANSFER}{ENDC}')
 
     # Append the recieved data to the file
     def stream_data(self, stream):
@@ -460,7 +457,6 @@ class Client(ClientXMPP):
             self.room_dict[room] = Group(room, nick, status)
 
     # Create a new room with its name and nick
-
     def create_new_room(self, room, nick):
         status = 'Hello world!'
         self.plugin['xep_0045'].joinMUC(

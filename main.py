@@ -180,11 +180,11 @@ def handle_session(event):
             received_messages = roster[dest].get_messages()
             if received_messages:
                 print(
-                    f'\nThe message(s) with {dest} are:')
+                    f'\n{YELLOW}The message(s) with {dest} are:{ENDC}')
                 for sender, msg in received_messages:
                     print(f'\t{sender}:  {msg}')
 
-            new_message = input('Enter a message: ')
+            new_message = input('\nEnter a message: ')
             xmpp.send_session_message(dest, new_message)
 
         # OPTION 5: Group chat options
@@ -247,11 +247,11 @@ def handle_session(event):
                     received_messages = room_dict[dest].get_messages()
                     if received_messages:
                         print(
-                            f'\nThe unread message(s) from {dest} are:')
+                            f'\n{YELLOW}The message(s) from {dest} are:{ENDC}')
                         for sender, msg in received_messages:
                             print(f'\t{sender} --> {msg}')
 
-                    new_message = input('Enter a message: ')
+                    new_message = input('\nEnter a message: ')
 
                     if new_message:
                         if xmpp.send_groupchat_message(dest, new_message):

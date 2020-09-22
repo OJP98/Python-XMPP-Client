@@ -85,5 +85,12 @@ GOT_ONLINE = '''
 '''
 
 GROUPCHAT = '''
-|==============> NOW ONLINE <==============|
+|==============>  GROUP CHAT <==============|
+'''
+
+STREAM_TRANSFER = '''
+|==============> STREAM STARTED <==============|
+            File transfer initiated!
+
+Please wait...
 '''
