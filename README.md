@@ -36,9 +36,24 @@ This client provides basic features like sending messages, receiving messages an
 * Send/Receive notifications
 
 
+## How to
+
+### File transfer
+
+1. Select option 7 once you logged in.
+2. Select the contact you want to send the file to.
+3. If tkinter is installed, a file explorer will pop up in order for you to select a file. Otherwise, enter the path with regular slashes, like this example:
+
+`C:/Users/User/Desktop/file.txt`
+
+If you receive a file, it'll stored in the **received_files** folder with the name the user sent you.
+
+
 ## Notifications
 
-There are several types of notifications, you'll receive them from the console with a format similar to this one: `|=================| NOTIFICATION TYPE |=================|`
+There are several types of notifications, you'll receive them from the console with a format similar to this one: 
+
+`|=================| NOTIFICATION TYPE |=================|`
 
 The notifications you can get are:
 
